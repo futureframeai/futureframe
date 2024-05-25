@@ -1,0 +1,107 @@
+[tool.poetry]
+name = "futureframe"
+version = "0.1.0"
+description = "Make automatic predictions with Future Frame."
+authors = ["Future Frame"]
+maintainers = ["Eduardo Dadalto <edadaltocg@gmail.com>"]
+homepage = "https://futureframe.ai"
+repository = "https://github.com/futureframeai/futureframe"
+documentation = "https://futureframe.ai/docs"
+keywords = ["data", "science"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+fire = "^0.6.0"
+numpy = "^1.26.4"
+pandas = "^2.2.2"
+
+[tool.poetry.dev-dependencies]
+pytest = "^8.2.0"
+pytest-cov = "*"
+pytest-xdist = "*"
+pytest-benchmark = "*"
+ruff = "^0.4.4"
+
+[tool.poetry.group.baselines.dependencies]
+openai = "^1.30.1"
+scikit-learn = "^1.4.2"
+xgboost = "^2.0.3"
+wandb = "^0.17.0"
+transformers = "^4.41.0"
+torch = "^2.3.0"
+pandas = "^2.2.2"
+
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "^1.6.0"
+mkdocs-material = "^9.5.24"
+mkdocstrings = "^0.25.1"
+mkdocstrings-python = "^1.10.3"
+mkdocs-gen-files = "^0.5.0"
+mkdocs-section-index = "^0.3.9"
+
+[tool.poetry.extras]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 120
+indent-width = 4
+exclude = [
+  ".bzr",
+  ".direnv",
+  ".eggs",
+  ".git",
+  ".git-rewrite",
+  ".hg",
+  ".ipynb_checkpoints",
+  ".mypy_cache",
+  ".nox",
+  ".pants.d",
+  ".pyenv",
+  ".pytest_cache",
+  ".pytype",
+  ".ruff_cache",
+  ".svn",
+  ".tox",
+  ".venv",
+  ".vscode",
+  "__pypackages__",
+  "_build",
+  "buck-out",
+  "build",
+  "dist",
+  "node_modules",
+  "site-packages",
+  "venv",
+  "conftest.py",
+]
+
+[tool.ruff.lint]
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+extend-select = [
+  "E501",
+  # pyupgrade
+  "UP",
+  # pycodestyle
+  "E",
+  # isort
+  "I",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+docstring-code-line-length = 88
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"

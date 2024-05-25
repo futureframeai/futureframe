@@ -1,0 +1,16 @@
+__pycache__/
+.DS_Store
+.coverage
+dist/
+build/
+.ipython/
+.ipynb_checkpoints/
+.virtual_documents/
+.*cache*/
+
+data/
+datasets/
+wandb/
+results/
+.env*
+weights/
