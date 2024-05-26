@@ -1,3 +1,4 @@
+import os
 import logging
 from pathlib import Path
 
@@ -25,14 +26,12 @@ class TabText(Predictor):
         columns=None,
         target_variable=None,
         batch_size=32,
-        n_jobs=-1,
         seed=42,
         **estimators_params,
     ) -> None:
         self.device = device
         self.columns = columns
         self.batch_size = batch_size
-        self.n_jobs = n_jobs
         self.seed = seed
         self.target_variable = target_variable
 
@@ -44,15 +43,13 @@ class TabText(Predictor):
             self.tokenizer.save_pretrained(Path(WEIGHTS_DIR) / f"{model_path}-model")
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(Path(WEIGHTS_DIR) / f"{model_path}-tokenizer")
-            self.model = AutoModel.from_pretrained(Path(WEIGHTS_DIR) / f"./{model_path}-model")
+            self.model = AutoModel.from_pretrained(Path(WEIGHTS_DIR) / f"{model_path}-model")
 
         self.model.eval()
         self.model.to(device)
 
-        self.training_vectors = torch.tensor([])
-
         # if task is classification
-        self.estimator = self.estimator_cls(n_jobs=n_jobs, random_state=seed, **estimators_params)
+        self.estimator = self.estimator_cls(random_state=seed, **estimators_params)
 
     @property
     def estimator_cls(self):
@@ -64,10 +61,8 @@ class TabText(Predictor):
                 self.columns = range(X_train.shape[1])
             elif isinstance(X_train, list):
                 self.columns = range(len(X_train[0]))
-                X_train = np.array(X_train)
             elif isinstance(X_train, pd.DataFrame):
                 self.columns = X_train.columns
-                X_train = X_train.values
 
         if self.target_variable is None:
             if isinstance(y_train, pd.Series):
@@ -77,16 +72,31 @@ class TabText(Predictor):
             else:
                 self.target_variable = "target"
 
+        if isinstance(X_train, list):
+            X_train = np.array(X_train)
+        elif isinstance(X_train, pd.DataFrame):
+            X_train = X_train.values
+
         all_embeddings = self._serialize_embed(X_train, "Fit")
         log.debug(f"Training embeddings shape: {all_embeddings.shape}")
         self.estimator.fit(all_embeddings, y_train)
 
     def predict(self, X_test):
+        if isinstance(X_test, list):
+            X_test = np.array(X_test)
+        elif isinstance(X_test, pd.DataFrame):
+            X_test = X_test.values
+
         all_embeddings = self._serialize_embed(X_test, "Predict")
         return self.estimator.predict(all_embeddings)
 
-    def predict_proba(self, X):
-        all_embeddings = self._serialize_embed(X, "Predict proba")
+    def predict_proba(self, X_test):
+        if isinstance(X_test, list):
+            X_test = np.array(X_test)
+        elif isinstance(X_test, pd.DataFrame):
+            X_test = X_test.values
+
+        all_embeddings = self._serialize_embed(X_test, "Predict proba")
         return self.estimator.predict_proba(all_embeddings)
 
     def _serialize_embed(self, X: np.ndarray, tqdm_suffix=""):

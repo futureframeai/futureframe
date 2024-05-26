@@ -38,7 +38,7 @@ poetry install
 Format:
 
 ```bash
-poetry run ruff format futureframe examples tests
+poetry run ruff format futureframe examples tests scripts
 ```
 
 Fix:

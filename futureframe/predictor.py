@@ -12,7 +12,7 @@ def predict(
     X_test: pd.DataFrame | pd.Series | list[str] | list[int] | list[float] | np.ndarray,
     X_train: pd.DataFrame | pd.Series | list[str] | list[int] | list[float] | np.ndarray,
     y_train: pd.DataFrame | pd.Series | list[str] | list[int] | list[float] | np.ndarray,
-    predictor: Predictor | str = "tabtext",
+    predictor: Predictor | str = "tabtext_xgb",
     **kwargs,
 ):
     """Predict on a DataFrame of features.

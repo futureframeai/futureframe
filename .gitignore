@@ -8,8 +8,8 @@ build/
 .virtual_documents/
 .*cache*/
 
-data/
-datasets/
+data/*
+datasets/*
 wandb/
 results/
 .env*
