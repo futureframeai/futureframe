@@ -70,7 +70,7 @@ jobs:
       - build
     runs-on: ubuntu-latest
     environment:
-      name: testpypi
+      name: release
       url: https://test.pypi.org/p/futureframe
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
@@ -92,7 +92,7 @@ jobs:
   #     - build
   #   runs-on: ubuntu-latest
   #   environment:
-  #     name: pypi
+  #     name: release
   #     url: https://pypi.org/p/futureframe  # Replace <package-name> with your PyPI project name
   #   permissions:
   #     id-token: write  # IMPORTANT: mandatory for trusted publishing
