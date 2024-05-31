@@ -1,4 +1,3 @@
-import os
 import logging
 from pathlib import Path
 
@@ -12,7 +11,7 @@ from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 
 from futureframe.config import WEIGHTS_DIR
-from futureframe.methods.base import Predictor
+from futureframe.models.base import Predictor
 
 log = logging.getLogger(__name__)
 
@@ -55,7 +54,7 @@ class TabText(Predictor):
     def estimator_cls(self):
         return LogisticRegression
 
-    def fit(self, X_train, y_train):
+    def finetune(self, X_train, y_train):
         if self.columns is None:
             if isinstance(X_train, np.ndarray):
                 self.columns = range(X_train.shape[1])

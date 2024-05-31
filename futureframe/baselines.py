@@ -1,16 +1,16 @@
+import logging
+
 from sklearn.compose import ColumnTransformer
-from sklearn.feature_selection import SelectPercentile, chi2
-from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.ensemble import (
-    RandomForestClassifier,
-    GradientBoostingRegressor,
     GradientBoostingClassifier,
+    GradientBoostingRegressor,
+    RandomForestClassifier,
     RandomForestRegressor,
 )
+from sklearn.feature_selection import SelectPercentile, chi2
+from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-import logging
 
 log = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ import numpy as np
 
 class Predictor(ABC):
     @abstractmethod
-    def fit(self, X_train, y_train):
+    def finetune(self, X_train, y_train):
         pass
 
     @abstractmethod

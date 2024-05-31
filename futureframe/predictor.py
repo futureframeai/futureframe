@@ -4,7 +4,7 @@
 import numpy as np
 import pandas as pd
 
-from futureframe.methods.base import Predictor
+from futureframe.models.base import Predictor
 from futureframe.registry import create_predictor
 
 
@@ -36,6 +36,6 @@ def predict(
     if isinstance(predictor, str):
         predictor = create_predictor(predictor, **kwargs)
 
-    predictor.fit(X_train, y_train)
+    predictor.finetune(X_train, y_train)
 
     return predictor.predict(X_test)

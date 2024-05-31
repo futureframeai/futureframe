@@ -4,7 +4,7 @@ import logging
 from typing import Callable
 
 from futureframe.baselines import create_baseline
-from futureframe.methods.tabtext import TabText, TabTextXGBoostClassifier
+from futureframe.models.tabtext import TabText, TabTextXGBoostClassifier
 
 log = logging.getLogger(__name__)
 
