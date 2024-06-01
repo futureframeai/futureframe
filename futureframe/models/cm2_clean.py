@@ -96,7 +96,7 @@ class CM2WordEmbedding(nn.Module):
         layer_norm_eps=1e-5,
         vocab_freeze=False,
         use_bert=True,
-        weights_dir="./weights/CM2",
+        weights_dir="./weights/CM2/CM2-v1",
     ) -> None:
         super().__init__()
         weights_path = Path(weights_dir)
@@ -153,7 +153,7 @@ class CM2FeatureExtractor:
         binary_columns=None,
         disable_tokenizer_parallel=False,
         ignore_duplicate_cols=False,
-        weights_dir="./weights/CM2",
+        weights_dir="./weights/CM2/CM2-v1",
         *args,
         **kwargs,
     ) -> None:
@@ -282,6 +282,7 @@ class CM2FeatureProcessor(nn.Module):
         use_bert=True,
         pool_policy="avg",
         device="cpu",
+        weights_dir="./weights/CM2/CM2-v1",
     ) -> None:
         super().__init__()
         self.word_embedding = CM2WordEmbedding(
@@ -292,6 +293,7 @@ class CM2FeatureProcessor(nn.Module):
             padding_idx=pad_token_id,
             vocab_freeze=vocab_freeze,
             use_bert=use_bert,
+            weights_dir=weights_dir,
         )
         self.num_embedding = CM2NumEmbedding(vocab_dim)
 
@@ -661,6 +663,7 @@ class CM2InputEncoder(nn.Module):
 class CM2Model(nn.Module):
     def __init__(
         self,
+        checkpoints_dir,
         categorical_columns=None,
         numerical_columns=None,
         binary_columns=None,
@@ -687,6 +690,7 @@ class CM2Model(nn.Module):
                 categorical_columns=self.categorical_columns,
                 numerical_columns=self.numerical_columns,
                 binary_columns=self.binary_columns,
+                weights_dir=checkpoints_dir,
                 **kwargs,
             )
 
@@ -699,6 +703,7 @@ class CM2Model(nn.Module):
             use_bert=use_bert,
             pool_policy=pool_policy,
             device=device,
+            weights_dir=checkpoints_dir,
         )
 
         self.input_encoder = CM2InputEncoder(
@@ -851,6 +856,7 @@ class CM2Classifier(CM2Model):
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         super().__init__(
+            checkpoint_dir,
             categorical_columns=categorical_columns,
             numerical_columns=numerical_columns,
             binary_columns=binary_columns,
@@ -918,7 +924,6 @@ class CM2Classifier(CM2Model):
         X_train,
         y_train,
         device="cpu",
-        checkpoint_dir="./weights/CM2/CM2-v1",
         num_epochs=50,
         batch_size=64,
         lr=1e-4,

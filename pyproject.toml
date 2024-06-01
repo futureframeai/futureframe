@@ -19,7 +19,6 @@ scikit-learn = "^1.4.2"
 transformers = "^4.41.0"
 torch = "^2.3.0"
 openml = "^0.14.2"
-psutil = "^5.9.8"
 pydantic = "^2.7.2"
 
 [tool.poetry.dev-dependencies]

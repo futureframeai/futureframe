@@ -1,4 +1,5 @@
 import datetime
+from typing import Optional
 import torch
 
 import pandas as pd
@@ -93,6 +94,115 @@ class FeatureTypeRecognition:
             else:
                 raise RuntimeError("error feature type!")
         return self.cat, self.bin, self.num
+
+
+def categorize_columns(df: pd.DataFrame):
+    """
+    Categorizes and extracts columns from a pandas DataFrame based on their data types, including detecting mixed types.
+
+    Parameters:
+    df (pd.DataFrame): The input DataFrame.
+
+    Returns:
+    dict: A dictionary containing lists of column names categorized by their data types.
+
+    Examples:
+    ```python
+        df = pd.DataFrame(
+            {
+                "A": [1, 2, "three"],
+                "B": ["a", "b", "c"],
+                "C": [True, False, True],
+                "D": pd.to_datetime(["2021-01-01", "2021-01-02", "2021-01-03"]),
+                "E": pd.Categorical(["test", "train", "test"]),
+            }
+        )
+        categorized_columns = categorize_columns(df)
+        print(categorized_columns)
+    ```
+    """
+    # Initialize dictionaries to hold the column names based on their types
+    column_categories = {
+        "categorical": [],
+        "boolean": [],
+        "numerical": [],
+        "datetime": [],
+        "mixed": [],
+        "other": [],
+    }
+
+    # Loop through the columns and categorize them
+    for col in df.columns:
+        unique_types = set(df[col].apply(type))
+        if len(unique_types) > 1:
+            column_categories["mixed"].append(col)
+        else:
+            col_type = list(unique_types)[0]
+            dtype = df[col].dtype
+            if isinstance(dtype, pd.CategoricalDtype) or isinstance(dtype, object):
+                column_categories["categorical"].append(col)
+                # if pd.api.types.is_categorical_dtype(df[col]) or pd.api.types.is_object_dtype(df[col]):
+            elif pd.api.types.is_bool_dtype(df[col]):
+                column_categories["boolean"].append(col)
+            elif pd.api.types.is_numeric_dtype(df[col]):
+                column_categories["numerical"].append(col)
+            elif pd.api.types.is_datetime64_any_dtype(df[col]):
+                column_categories["datetime"].append(col)
+            else:
+                column_categories["other"].append(col)
+
+    return column_categories
+
+
+def split_target_variable(df: pd.DataFrame, target: Optional[str] = None):
+    """
+    Splits a DataFrame into features (X) and target variable (y).
+
+    Parameters:
+    df (pd.DataFrame): The input DataFrame.
+    target (str): The name of the target variable column.
+
+    Returns:
+    tuple: A tuple containing the features DataFrame (X) and the target Series (y).
+
+    Examples:
+    ```python
+        df = pd.DataFrame({
+            'feature1': [1, 2, 3],
+            'feature2': ['a', 'b', 'c'],
+            'target': [0, 1, 0]
+        })
+        X, y = split_target_variable(df, 'target')
+        print(X)
+        print(y)
+    ```
+    """
+    if target is None:
+        target = df.columns.tolist()[-1]
+
+    if target not in df.columns:
+        raise ValueError(f"Target variable '{target}' not found in DataFrame columns.")
+
+    X = df.drop(columns=[target])
+    y = df[target]
+
+    return X, y
+
+
+def get_num_classes(y):
+    if not isinstance(y, pd.Series):
+        y = pd.Series(y)
+    num_classes = len(y.value_counts())
+    return num_classes
+
+
+def encode_target_label(y: pd.Series):
+    # encode target label
+    name = y.name
+    index = y.index
+    y = LabelEncoder().fit_transform(y.values)
+    y = pd.Series(y, index=index, name=name)
+    return y
 
 
 def preprocess(df, target=None, auto_feature_type=None, encode_cat=False):
