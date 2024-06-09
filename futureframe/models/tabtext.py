@@ -10,10 +10,10 @@ from sklearn.linear_model import LinearRegression, LogisticRegression
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 
-from futureframe.config import WEIGHTS_DIR
 from futureframe.models.base import Predictor
 
 log = logging.getLogger(__name__)
+WEIGHTS_DIR = "weights"
 
 
 class TabText(Predictor):
