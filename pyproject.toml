@@ -1,0 +1,109 @@
+[tool.poetry]
+name = "futureframe"
+version = "0.1.3"
+description = "Accelerate your data science workflow from months to days with foundation models for tabular data."
+authors = ["Future Frame"]
+maintainers = ["Eduardo Dadalto <edadaltocg@gmail.com>"]
+homepage = "https://futureframe.ai"
+repository = "https://github.com/futureframeai/futureframe"
+documentation = "https://futureframe.ai/docs"
+keywords = ["data science", "foundation models", "tabular data"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+numpy = "^1.26.4"
+pandas = "^2.2.2"
+scikit-learn = "^1.4.2"
+transformers = "^4.41.0"
+torch = "^2.3.0"
+openml = "^0.14.2"
+pydantic = "^2.7.2"
+accelerate = "^0.30.1"
+pyarrow = "^16.1.0"
+fire = "^0.6.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^8.2.0"
+pytest-cov = "*"
+pytest-xdist = "*"
+pytest-benchmark = "*"
+ruff = "^0.4.4"
+twine = "^5.1.0"
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "^1.6.0"
+mkdocs-material = "^9.5.24"
+mkdocstrings = "^0.25.1"
+mkdocstrings-python = "^1.10.3"
+mkdocs-gen-files = "^0.5.0"
+mkdocs-section-index = "^0.3.9"
+
+[tool.poetry.group.extras.dependencies]
+tabulate = "^0.9.0"
+notebook = "^7.2.0"
+
+[tool.poetry.extras]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 120
+indent-width = 4
+exclude = [
+  ".bzr",
+  ".direnv",
+  ".eggs",
+  ".git",
+  ".git-rewrite",
+  ".hg",
+  ".ipynb_checkpoints",
+  ".mypy_cache",
+  ".nox",
+  ".pants.d",
+  ".pyenv",
+  ".pytest_cache",
+  ".pytype",
+  ".ruff_cache",
+  ".svn",
+  ".tox",
+  ".venv",
+  ".vscode",
+  "__pypackages__",
+  "_build",
+  "buck-out",
+  "build",
+  "dist",
+  "node_modules",
+  "site-packages",
+  "venv",
+  "conftest.py",
+]
+
+[tool.ruff.lint]
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+extend-select = [
+  "E501",
+  # pyupgrade
+  "UP",
+  # pycodestyle
+  "E",
+  # isort
+  "I",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+docstring-code-line-length = 88
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
