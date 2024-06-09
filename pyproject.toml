@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "futureframe"
-version = "0.1.3"
+version = "0.1.4"
 description = "Accelerate your data science workflow from months to days with foundation models for tabular data."
 authors = ["Future Frame"]
 maintainers = ["Eduardo Dadalto <eduardo@futureframe.ai>"]
