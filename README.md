@@ -1,40 +1,47 @@
 # 💠 Future Frame
 
-<p align="center">
-  <i>Accelerate your data science workflow from months to days with foundation models for tabular data</i>
-</p>
+* This Python package allows you to interact with pre-trained foundation models for tabular data.
+* Easily fine-tune them on your classification and regression use cases in a single line of code.
+* Interested in what we're building? Join our [waitlist](https://futureframe.ai/).
 
 ## Installation
+
+Install Future Frame with `pip` – more details on our [PyPI page](https://pypi.org/project/futureframe/).
 
 ```bash
 pip install futureframe
 ```
 
-## Quick-start guide
+## Quick Start
+
+Use Future Frame to fine-tune a pre-trained foundation model on a classification task.
 
 ```python
+# Import standard libraries
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
 
+# Import Future Frame
 import futureframe as ff
 
+# Import data
 dataset_name = "tests/data/churn.csv"
 target_variable = "Churn"
 df = pd.read_csv(dataset_name)
 
+# Split data
 X, y = df.drop(columns=[target_variable]), df[target_variable]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-##############
-# Future Frame
-##############
+# Fine-tune a pre-trained classifier with Future Frame
 model = ff.models.CM2Classifier()
 model.finetune(X_train, y_train)
 
+# Make predictions with Future Frame
 y_pred = model.predict(X_test)
-##############
 
+# Evaluate your model
 auc = roc_auc_score(y_test, y_pred)
 print(f"AUC: {auc:0.2f}")
 ```
@@ -45,17 +52,17 @@ print(f"AUC: {auc:0.2f}")
 | ---------- | ---------------------------------------------------------- | --------------------------------------------------- | -------------------------------------- |
 | CM2        | Towards Cross-Table Masked Pretraining for Web Data Mining | [Ye et al., 2024](https://arxiv.org/abs/2307.04308) | [Link](https://github.com/Chao-Ye/CM2) |
 
-More to come!
+More foundation models will be integrated into the library soon. Stay stuned by joining our [waitlist](https://futureframe.ai/)!
 
-## Important links
+## Links
 
-- [Future Frame Website](https://futureframe.ai/)
-- [`futureframe` Pypi package index](https://pypi.python.org/pypi/futureframe)
-- [`futureframe` Github repository](https://github.com/futureframeai/futureframe)
-<!-- - [Documentation](https://futureframe.ai/docs/) -->
+* [Future Frame Official Website](https://futureframe.ai/)
+* [`futureframe` PyPI Page](https://pypi.python.org/pypi/futureframe)
+* [`futureframe` GitHub Repository](https://github.com/futureframeai/futureframe)
+* Documentation: coming soon!
 
 ## Contributing
 
-We are currently under heavy development. If you want to contribute, please send us an email at <i>eduardo(at)futureframe.ai</i>.
-
-If you find any bugs, please write us an [issue](https://github.com/futureframeai/futureframe/issues/new) :).
+* We are currently under heavy development.
+* If you'd like to contribute, please send us an email at <i>eduardo(at)futureframe.ai</i>.
+* To report a bug, please write an [issue](https://github.com/futureframeai/futureframe/issues/new).
