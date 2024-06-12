@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "futureframe"
-version = "0.1.4"
+version = "0.1.5"
 description = "Accelerate your data science workflow from months to days with foundation models for tabular data."
 authors = ["Future Frame"]
 maintainers = ["Eduardo Dadalto <eduardo@futureframe.ai>"]
@@ -11,15 +11,14 @@ keywords = ["data science", "foundation models", "tabular data"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.9"
-numpy = "^1.26.4"
+python = "^3.10"
+numpy = "^1.17"
 pandas = "^2.2.2"
 scikit-learn = "^1.4.2"
 transformers = "^4.41.0"
 torch = "^2.3.0"
 openml = "^0.14.2"
 pydantic = "^2.7.2"
-accelerate = "^0.30.1"
 pyarrow = "^16.1.0"
 fire = "^0.6.0"
 
