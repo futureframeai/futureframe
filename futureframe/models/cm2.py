@@ -944,6 +944,7 @@ class CM2Classifier(CM2Model):
 
         self.num_class = num_classes
         self.clf = CM2LinearClassifier(num_class=self.num_class, hidden_dim=self.hidden_dim)
+        self.clf.to(device)
         if self.num_class > 2:
             self.loss_fn = nn.CrossEntropyLoss(reduction="none")
         else:

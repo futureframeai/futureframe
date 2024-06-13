@@ -29,6 +29,7 @@ pytest-xdist = "*"
 pytest-benchmark = "*"
 ruff = "^0.4.4"
 twine = "^5.1.0"
+pre-commit = "^3.7.1"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.6.0"
