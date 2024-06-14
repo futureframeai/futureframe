@@ -6,11 +6,13 @@
 
 ## Installation
 
-Install Future Frame with `pip` – more details on our [PyPI page](https://pypi.org/project/futureframe/).
+1. Install Future Frame with `pip` – more details on our [PyPI page](https://pypi.org/project/futureframe/).
 
 ```bash
 pip install futureframe
 ```
+
+2. Download model weights [here](https://drive.google.com/drive/folders/1-SVab4cv3nLaUJjyOlscKP_OxOBbs_4e?usp=sharing) and store the `weights` folder in your working directory.
 
 ## Quick Start
 
