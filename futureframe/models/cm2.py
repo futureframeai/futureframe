@@ -730,6 +730,11 @@ class CM2Model(nn.Module):
         self.device = device
         self.to(device)
 
+        # tie weights
+        self.input_encoder.feature_processor.word_embedding.word_embeddings_value.weight = (
+            self.input_encoder.feature_processor.word_embedding.word_embeddings_header.weight
+        )
+
     def forward(self, x, y=None):
         embeded = self.input_encoder(x)
         embeded = self.cls_token(**embeded)
