@@ -931,7 +931,7 @@ class CM2Classifier(CM2Model):
         eval_metric="auc",
         eval_less_is_better=False,
         output_dir="./models/checkpoint-finetune",
-        patience=20,
+        patience=5,
         num_workers=0,
         flag=1,
         eval_batch_size=256,
