@@ -13,7 +13,6 @@ from transformers import AutoModel, AutoTokenizer
 from futureframe.models.base import Predictor
 
 log = logging.getLogger(__name__)
-WEIGHTS_DIR = "weights"
 
 
 class TabText(Predictor):

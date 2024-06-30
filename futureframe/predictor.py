@@ -1,6 +1,5 @@
 """Predictor module."""
 
-# from futureframe.types import Features
 import numpy as np
 import pandas as pd
 

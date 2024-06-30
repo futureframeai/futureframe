@@ -116,12 +116,7 @@ def main(
             y_pred = predictor.predict(X_test)
 
             res = eval(y_test, y_pred, task_type)
-            results = {
-                "task_id": task_id,
-                "name": name,
-                **cfg,
-                **res,
-            }
+            results = {"task_id": task_id, "name": name, **cfg, **res}
             df = pd.DataFrame([results])
 
             # append the results to a CSV file

@@ -8,6 +8,7 @@ References:
 License: Apache-2.0
 """
 
+import datetime
 import logging
 import math
 import os
@@ -28,8 +29,7 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 from transformers import BertTokenizerFast
 
-from futureframe.evaluate import evaluate, get_eval_metric_fn
-from futureframe.finetune import LinearWarmupScheduler, SupervisedTrainCollator
+from futureframe.evaluate import eval, get_eval_metric_fn
 from futureframe.utils import freeze, get_activation_fn, get_parameter_names
 
 logger = logging.getLogger(__name__)
@@ -43,6 +43,38 @@ WEIGHTS_NAME = "pytorch_model.bin"
 TOKENIZER_DIR = "tokenizer"
 EXTRACTOR_STATE_DIR = "extractor"
 INPUT_ENCODER_NAME = "input_encoder.bin"
+
+
+class LinearWarmupScheduler:
+    def __init__(self, optimizer, base_lr, warmup_epochs, warmup_start_lr=-1, warmup_ratio=0.1, **kwargs):
+        self.optimizer = optimizer
+        self.base_lr = base_lr
+        self.warmup_epochs = warmup_epochs
+
+        self.warmup_start_lr = warmup_start_lr if warmup_start_lr >= 0 else base_lr * warmup_ratio
+
+    def step(self, cur_epoch):
+        if cur_epoch < self.warmup_epochs:
+            self._warmup_lr_schedule(
+                step=cur_epoch,
+                optimizer=self.optimizer,
+                max_step=self.warmup_epochs,
+                init_lr=self.warmup_start_lr,
+                max_lr=self.base_lr,
+            )
+        elif cur_epoch == self.warmup_epochs:
+            self._set_lr(self.optimizer, self.base_lr)
+
+    def init_optimizer(self):
+        self._set_lr(self.optimizer, self.warmup_start_lr)
+
+    def _warmup_lr_schedule(self, optimizer, step, max_step, init_lr, max_lr):
+        lr = min(max_lr, init_lr + (max_lr - init_lr) * step / max(max_step, 1))
+        self._set_lr(optimizer, lr)
+
+    def _set_lr(self, optimizer, lr):
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = lr
 
 
 class EarlyStopping:
@@ -840,6 +872,46 @@ class CM2MaskToken(nn.Module):
         return embedding
 
 
+class SupervisedTrainCollator:
+    def __init__(self, **kwargs):
+        pass
+
+    def __call__(self, data):
+        if data[0][0] is not None:
+            x_cat_input_ids = torch.cat([row[0] for row in data], 0)
+        else:
+            x_cat_input_ids = None
+
+        if data[0][1] is not None:
+            x_cat_att_mask = torch.cat([row[1] for row in data], 0)
+        else:
+            x_cat_att_mask = None
+
+        if data[0][2] is not None:
+            x_num = torch.cat([row[2] for row in data], 0)
+        else:
+            x_num = None
+
+        col_cat_input_ids = data[0][3]
+        col_cat_att_mask = data[0][4]
+        num_col_input_ids = data[0][5]
+        num_att_mask = data[0][6]
+        y = None
+        if data[0][7] is not None:
+            y = pd.concat([row[7] for row in data])
+
+        inputs = {
+            "x_cat_input_ids": x_cat_input_ids,
+            "x_cat_att_mask": x_cat_att_mask,
+            "x_num": x_num,
+            "col_cat_input_ids": col_cat_input_ids,
+            "col_cat_att_mask": col_cat_att_mask,
+            "num_col_input_ids": num_col_input_ids,
+            "num_att_mask": num_att_mask,
+        }
+        return inputs, y
+
+
 class CM2Classifier(CM2Model):
     def __init__(
         self,
@@ -901,8 +973,7 @@ class CM2Classifier(CM2Model):
         logits = self.clf(encoder_output)
 
         if y is not None:
-            # compute classification loss
-            if self.num_class == 2:
+            if self.num_class <= 2:
                 if isinstance(y, pd.Series):
                     y_ts = torch.tensor(y.values).to(self.device).float()
                 else:
@@ -924,11 +995,12 @@ class CM2Classifier(CM2Model):
         self,
         X_train,
         y_train,
-        device="cpu",
+        device=None,
+        num_class=None,
         num_epochs=50,
         batch_size=64,
         lr=1e-4,
-        eval_metric="auc",
+        eval_metric=None,
         eval_less_is_better=False,
         output_dir="./models/checkpoint-finetune",
         patience=5,
@@ -943,19 +1015,50 @@ class CM2Classifier(CM2Model):
         load_best_at_last=True,
         ignore_duplicate_cols=True,
         data_weight=None,
+        freeze_backbone=True,
     ):
+        if device is None:
+            device = self.device
+        if isinstance(y_train, pd.DataFrame):
+            logger.debug("y_train is a DataFrame")
+            assert y_train.shape[1] == 1, "y_train should be single column"
+            name = y_train.columns[0]
+            y_train = pd.Series(y_train.to_numpy().ravel(), name=name)
         X, y, cat_cols, num_cols, bin_cols, num_classes, num_cols_processing = preprocess(X_train, y_train)
+        # print(cat_cols, num_cols, bin_cols)
         self.num_cols_processing = num_cols_processing
 
-        self.num_class = num_classes
-        self.clf = CM2LinearClassifier(num_class=self.num_class, hidden_dim=self.hidden_dim)
+        if num_class is None:
+            self.num_class = num_classes
+        else:
+            self.num_class = num_class
+
+        logger.debug(f"{y=}")
+        if self.num_class == 1:
+            print("Regression task detected")
+            self.clf = CM2LinearRegression(hidden_dim=self.hidden_dim)
+        else:
+            print("Classification task detected")
+            self.clf = CM2LinearClassifier(num_class=self.num_class, hidden_dim=self.hidden_dim)
         self.clf.to(device)
-        if self.num_class > 2:
+        if self.num_class == 1:
+            self.loss_fn = nn.MSELoss(reduction="none")
+            eval_metric = "mse" if eval_metric is None else eval_metric
+        elif self.num_class > 2:
             self.loss_fn = nn.CrossEntropyLoss(reduction="none")
+            eval_metric = "acc"
         else:
             self.loss_fn = nn.BCEWithLogitsLoss(reduction="none")
+            eval_metric = "auc"
 
         self.update({"cat": cat_cols, "num": num_cols, "bin": bin_cols})
+
+        if freeze_backbone:
+            # freeze(self.input_encoder)
+            freeze(self.encoder, True)
+            freeze(self.cls_token, True)
+            freeze(self.input_encoder.feature_processor.word_embedding, True)
+            freeze(self.input_encoder.feature_processor.align_layer, True)
 
         X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1, random_state=42)
 
@@ -979,7 +1082,7 @@ class CM2Classifier(CM2Model):
             eval_metric=eval_metric,
             eval_less_is_better=eval_less_is_better,
             num_workers=num_workers,
-            regression_task=False,
+            regression_task=True if self.num_class == 1 else False,
             flag=flag,
             data_weight=data_weight,
             device=device,
@@ -987,6 +1090,7 @@ class CM2Classifier(CM2Model):
 
         trainer.train((X_val, y_val))
 
+    @torch.no_grad()
     def predict(
         self,
         x_test,
@@ -994,9 +1098,9 @@ class CM2Classifier(CM2Model):
         return_loss=False,
         eval_batch_size=256,
         table_flag=0,
-        regression_task=False,
     ):
         self.eval()
+        regression_task = True if self.num_class == 1 else False
 
         if self.numerical_columns is not None and self.num_cols_processing is not None:
             x_test[self.numerical_columns] = self.num_cols_processing.transform(x_test[self.numerical_columns])
@@ -1051,6 +1155,8 @@ class CM2Classifier(CM2Model):
             else:  # multi-class classification
                 pred_list.append(torch.softmax(logits, -1).detach().cpu().numpy())
         pred_all = np.concatenate(pred_list, 0)
+
+        logger.debug(f"{logits.shape=}")
         if logits.shape[-1] == 1:
             pred_all = pred_all.flatten()
 
@@ -1310,11 +1416,11 @@ class Trainer:
                 if self.early_stopping(-eval_res, self.model) and eval_data:
                     if self.regression_task:
                         ypred = predict(self.model, eval_data[0], regression_task=True)
-                        ans = evaluate(ypred, eval_data[1], metric="rmse")
+                        ans = eval(eval_data[1], ypred, self.model.num_class)
                     else:
                         ypred = predict(self.model, eval_data[0])
-                        ans = evaluate(ypred, eval_data[1], metric="auc", num_class=self.model.num_class)
-                    real_res_list.append(ans[0])
+                        ans = eval(eval_data[1], ypred, self.model.num_class)
+                    real_res_list.append(ans)
                     # logging.info(f'eval_res_list: {real_res_list}')
                 if self.early_stopping.early_stop:
                     logging.info("early stopped")
@@ -1622,8 +1728,19 @@ def preprocess(X, y, auto_feature_type=None, encode_cat=False):
     cat_cols, bin_cols, num_cols = auto_feature_type.fit(X)
 
     # encode target label
-    y = LabelEncoder().fit_transform(y.values)
-    y = pd.Series(y, index=X.index, name=target)
+    if pd.api.types.is_float_dtype(y):
+        fractional_parts, integral_parts = np.modf(y)
+        # if all fractional parts are zero, then it is an integer
+        if np.all(fractional_parts == 0):
+            y = LabelEncoder().fit_transform(y.values)
+            y = pd.Series(y, index=X.index, name=target)
+            num_class = len(y.value_counts())
+        else:
+            num_class = 1
+    else:
+        y = LabelEncoder().fit_transform(y.values)
+        y = pd.Series(y, index=X.index, name=target)
+        num_class = len(y.value_counts())
 
     # start processing features
     # process num
@@ -1662,7 +1779,9 @@ def preprocess(X, y, auto_feature_type=None, encode_cat=False):
     X = X.reset_index(drop=True)
     y = y.reset_index(drop=True)
 
-    num_class = len(y.value_counts())
+    if len(cat_cols) == 0:
+        cat_cols = [cat_cols]
+
     return X, y, cat_cols, num_cols, bin_cols, num_class, num_cols_processing
 
 

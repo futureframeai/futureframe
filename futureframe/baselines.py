@@ -15,6 +15,24 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 log = logging.getLogger(__name__)
 
 
+def get_baseline_predictor(predictor_name, task_type, **kwargs):
+    if predictor_name == "RandomForest":
+        if task_type == "regression":
+            p = RandomForestRegressor(**kwargs)
+        else:
+            p = RandomForestClassifier(**kwargs)
+
+    elif predictor_name == "GradientBoosting":
+        if task_type == "regression":
+            p = GradientBoostingRegressor(**kwargs)
+        else:
+            p = GradientBoostingClassifier(**kwargs)
+
+    else:
+        raise ValueError(f"Predictor {predictor_name} not supported")
+    return p
+
+
 def create_baseline(predictor_name: str, task_type: str, numeric_features, categorical_features, **kwargs):
     categorical_transformer = Pipeline(
         steps=[
@@ -34,21 +52,7 @@ def create_baseline(predictor_name: str, task_type: str, numeric_features, categ
             ("cat", categorical_transformer, categorical_features),
         ]
     )
-    if predictor_name == "RandomForest":
-        if task_type == "regression":
-            p = RandomForestRegressor(**kwargs)
-        else:
-            p = RandomForestClassifier(**kwargs)
-
-    elif predictor_name == "GradientBoosting":
-        if task_type == "regression":
-            p = GradientBoostingRegressor(**kwargs)
-        else:
-            p = GradientBoostingClassifier(**kwargs)
-
-    else:
-        raise ValueError(f"Predictor {predictor_name} not supported")
-
+    p = get_baseline_predictor(predictor_name, task_type, **kwargs)
     predictor = Pipeline(
         steps=[
             ("preprocessor", preprocessor),

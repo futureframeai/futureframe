@@ -1,1 +1,1 @@
-from . import baselines, config, evaluate, features, models, predictor, registry, utils
+from . import baselines, benchmarks, config, data_types, evaluate, features, models, predictor, registry, utils
