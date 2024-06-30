@@ -24,7 +24,7 @@ METRICS = ["accuracy", "auc", "f1", "precision", "recall", "mse", "mae", "r2"]
 def eval_binary_clf(y_true: np.ndarray, y_pred: np.ndarray):
     log.debug(f"{y_true=}")
     log.debug(f"{y_pred=}")
-    y_pred_hard = (y_pred <= 0.5).astype(int)
+    y_pred_hard = (y_pred >= 0.5).astype(int)
     acc = accuracy_score(y_true, y_pred_hard)
     auc = roc_auc_score(y_true, y_pred)
     f1 = f1_score(y_true, y_pred_hard)

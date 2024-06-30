@@ -22,6 +22,12 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 import torch.nn.init as nn_init
+from sklearn.metrics import (
+    accuracy_score,
+    mean_squared_error,
+    r2_score,
+    roc_auc_score,
+)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler, OrdinalEncoder
 from torch import Tensor, nn
@@ -29,7 +35,7 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 from transformers import BertTokenizerFast
 
-from futureframe.evaluate import eval, get_eval_metric_fn
+from futureframe.evaluate import eval
 from futureframe.utils import freeze, get_activation_fn, get_parameter_names
 
 logger = logging.getLogger(__name__)
@@ -1242,6 +1248,55 @@ class CM2Regression(CM2Model):
             loss = None
 
         return logits, loss
+
+
+def acc_fn(y, p, num_class=2):
+    if num_class == 2:
+        y_p = (p >= 0.5).astype(int)
+    else:
+        y_p = np.argmax(p, -1)
+    return accuracy_score(y, y_p)
+
+
+def auc_fn(y, p, num_class=2):
+    if num_class > 2:
+        return roc_auc_score(y, p, multi_class="ovo")
+    else:
+        return roc_auc_score(y, p)
+
+
+def mse_fn(y, p, num_class=None):
+    return mean_squared_error(y, p)
+
+
+def r2_fn(y, p, num_class=None):
+    y = y.values
+    return r2_score(y, p)
+
+
+def rae_fn(y_true: np.ndarray, y_pred: np.ndarray, num_class=None):
+    y_true = y_true.values
+    up = np.abs(y_pred - y_true).sum()
+    down = np.abs(y_true.mean() - y_true).sum()
+    score = 1 - up / down
+    return score
+
+
+def rmse_fn(y, p, num_class=None):
+    return np.sqrt(mean_squared_error(y, p))
+
+
+def get_eval_metric_fn(eval_metric):
+    fn_dict = {
+        "acc": acc_fn,
+        "auc": auc_fn,
+        "mse": mse_fn,
+        "r2": r2_fn,
+        "rae": rae_fn,
+        "rmse": rmse_fn,
+        "val_loss": None,
+    }
+    return fn_dict[eval_metric]
 
 
 class Trainer:
