@@ -76,7 +76,7 @@ def seed_all(seed: int = 42):
     random.seed(seed)
 
 
-def get_num_parameters(model):
+def get_num_parameters(model: nn.Module):
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     non_trainable_params = sum(p.numel() for p in model.parameters() if not p.requires_grad)
     return trainable_params, non_trainable_params
@@ -232,3 +232,10 @@ def get_last_two_folders(path):
         return parts[-1]
     else:
         return ""
+
+
+def save_or_append_to_csv(df: pd.DataFrame, path: str):
+    if not os.path.exists(path):
+        df.to_csv(path, index=False)
+    else:
+        df.to_csv(path, mode="a", header=False, index=False)

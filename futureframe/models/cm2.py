@@ -36,7 +36,7 @@ from tqdm import tqdm
 from transformers import BertTokenizerFast
 
 from futureframe.evaluate import eval
-from futureframe.utils import freeze, get_activation_fn, get_parameter_names
+from futureframe.utils import freeze, get_activation_fn, get_num_parameters, get_parameter_names
 
 logger = logging.getLogger(__name__)
 
@@ -1066,6 +1066,9 @@ class CM2Classifier(CM2Model):
             freeze(self.input_encoder.feature_processor.word_embedding, True)
             freeze(self.input_encoder.feature_processor.align_layer, True)
 
+        trainable, non_trainable = get_num_parameters(self)
+        print(f"{trainable=}, {non_trainable=}")
+
         X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1, random_state=42)
 
         trainer = Trainer(
@@ -2018,4 +2021,6 @@ def predict(
         avg_loss = np.mean(loss_list)
         return avg_loss
     else:
+        return pred_all
+        return pred_all
         return pred_all

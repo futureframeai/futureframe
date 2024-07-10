@@ -188,3 +188,14 @@ def valuedtype_to_columndtype(valuedtype: ValueDtype):
         ValueDtype.OTHER: ColumnDtype.OTHER,
     }
     return mapping.get(valuedtype, ColumnDtype.OTHER)
+
+
+class Metrics(Enum):
+    ACCURACY = "accuracy"
+    AUC = "auc"
+    F1 = "f1"
+    PRECISION = "precision"
+    RECALL = "recall"
+    MSE = "mse"
+    MAE = "mae"
+    R2 = "r2"

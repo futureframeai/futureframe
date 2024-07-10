@@ -15,16 +15,20 @@ from sklearn.metrics import (
 )
 from tqdm import tqdm
 
+from futureframe.features import prepare_target_for_eval
+
 log = logging.getLogger(__name__)
 
 
 METRICS = ["accuracy", "auc", "f1", "precision", "recall", "mse", "mae", "r2"]
 
 
-def eval_binary_clf(y_true: np.ndarray, y_pred: np.ndarray):
-    log.debug(f"{y_true=}")
-    log.debug(f"{y_pred=}")
-    y_pred_hard = (y_pred >= 0.5).astype(int)
+def eval_binary_clf(y_true: np.ndarray, y_pred: np.ndarray, is_prob: bool = False):
+    if not is_prob:
+        # logits
+        y_pred_hard = (y_pred >= 0).astype(int)
+    else:
+        y_pred_hard = (y_pred >= 0.5).astype(int)
     acc = accuracy_score(y_true, y_pred_hard)
     auc = roc_auc_score(y_true, y_pred)
     f1 = f1_score(y_true, y_pred_hard)
@@ -41,18 +45,20 @@ def eval_regression(y_true: np.ndarray, y_pred: np.ndarray):
 
 
 def eval_multiclass_clf(y_true: np.ndarray, y_pred: np.ndarray):
-    acc = accuracy_score(y_true, y_pred)
-    f1 = f1_score(y_true, y_pred, average="macro")
-    precision = precision_score(y_true, y_pred, average="macro")
-    recall = recall_score(y_true, y_pred, average="macro")
+    y_pred_hard = np.argmax(y_pred, axis=1)
+    acc = accuracy_score(y_true, y_pred_hard)
+    f1 = f1_score(y_true, y_pred_hard, average="macro")
+    precision = precision_score(y_true, y_pred_hard, average="macro")
+    recall = recall_score(y_true, y_pred_hard, average="macro")
     return dict(accuracy=acc, f1=f1, precision=precision, recall=recall)
 
 
-def eval(y_true: np.ndarray, y_pred: np.ndarray, num_classes: int, non_none_only: bool = False):
+def eval(y_true: np.ndarray, y_pred: np.ndarray, num_classes: int, non_none_only: bool = False, is_prob: bool = False):
     results = {k: None for k in METRICS}
     res = {}
+    y_true = prepare_target_for_eval(y_true, num_classes)
     if num_classes == 2:
-        res = eval_binary_clf(y_true, y_pred)
+        res = eval_binary_clf(y_true, y_pred, is_prob=is_prob)
     elif num_classes > 2:
         res = eval_multiclass_clf(y_true, y_pred)
     elif num_classes == 1:
