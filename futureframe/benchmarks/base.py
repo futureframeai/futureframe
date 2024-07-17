@@ -11,9 +11,10 @@ from torch import Tensor
 from tqdm import tqdm
 
 from futureframe import config
+from futureframe.baselines import create_baseline_pipeline, get_task_type
 from futureframe.benchmarks.download import download_dataset, get_dataset_dest_from_link
 from futureframe.evaluate import eval
-from futureframe.features import get_num_classes, prepare_target_for_eval
+from futureframe.features import encode_target_label, get_num_classes, prepare_target_for_eval
 from futureframe.finetune import finetune, predict
 from futureframe.utils import cast_to_ndarray, get_last_two_folders
 
@@ -62,15 +63,21 @@ class Benchmark:
             self.subdirs.append(dest_dir)
         log.debug(f"{self.subdirs=}")
 
-    def run(self, model, batch_size: int = 8, seed: int = 42, *args, **kwargs):
+    def run(self, model_class, params, batch_size: int = 8, task_type=None, seed: int = 42, *args, **kwargs):
         results = []
         for subdir in tqdm(self.subdirs, desc="Running benchmark"):
+            # for self.benchmark_iter():
+            log.debug(f"Running benchmark for {subdir}")
             t0 = time.perf_counter()
+            model = model_class(**params)
             try:
-                res = self.run_subdir(subdir, model, batch_size=batch_size, seed=seed, *args, **kwargs)
+                res = self.run_subdir(
+                    subdir, model, batch_size=batch_size, task_type=task_type, seed=seed, *args, **kwargs
+                )
             except Exception as e:
                 log.error(f"Failed to run benchmark for {subdir}: {e}")
                 res = {"error": str(e)}
+                raise e
             t1 = time.perf_counter()
             res["time_in_s"] = t1 - t0
 
@@ -99,24 +106,27 @@ class Benchmark:
             X_train, X_val, y_train, y_val = self._get_split(subdir, test_size=0.3, random_state=seed)
             yield X_train, y_train, X_val, y_val
 
-    def run_subdir(self, subdir, model, batch_size: int = 8, seed: int = 42, *args, **kwargs):
+    def run_subdir(self, subdir, model, batch_size: int = 8, task_type=None, seed: int = 42, *args, **kwargs):
         X_train, X_test, y_train, y_test = self._get_split(subdir, test_size=0.3, random_state=seed)
-        num_classes = get_num_classes(y_train)
+        num_classes = get_num_classes(y_train, task_type)
         log.debug(f"{num_classes=}")
         y_pred = self._run_model(model, num_classes, X_train, y_train, X_test, batch_size=batch_size, *args, **kwargs)
         y_pred = cast_to_ndarray(y_pred)
 
         y_test = prepare_target_for_eval(y_test, num_classes=num_classes)
-        metrics = eval(y_test, y_pred, num_classes=num_classes, is_prob=True)
+        return self.eval(model.__class__.__name__, get_last_two_folders(subdir), y_test, y_pred, num_classes, seed)
+
+    @staticmethod
+    def eval(model_name, dataset_name, y_test, y_pred, num_classes, seed):
+        metrics = eval(y_test, y_pred, is_prob=True)
         log.debug(f"{metrics=}")
         results = {
-            "dataset": get_last_two_folders(subdir),
-            "model": model.__class__.__name__,
-            "seed": seed,
+            "model": model_name,
+            "dataset": dataset_name,
             "num_classes": num_classes,
             **metrics,
+            "seed": seed,
         }
-
         return results
 
     def run_idx(self, idx, model, batch_size: int = 8, seed: int = 42, *args, **kwargs):
@@ -157,6 +167,40 @@ class Benchmark:
         return X_train, X_test, y_train, y_test
 
 
+class BaselineBenchmark(Benchmark):
+    @staticmethod
+    def _run_model(
+        model, num_class, X_train, y_train, X_test, batch_size=None, patience=None, num_epochs=None, *args, **kwargs
+    ) -> Tensor:
+        print(f"{num_epochs=}, {patience=}")
+        numerical_features = X_train.select_dtypes(include=["int64", "float64"]).columns.tolist()
+        categorical_features = X_train.select_dtypes(include=["object"]).columns.tolist()
+        task_type = get_task_type(num_class)
+        model_pipeline = create_baseline_pipeline(
+            model,
+            numerical_features=numerical_features,
+            categorical_features=categorical_features,
+            task_type=task_type,
+        )
+        model_pipeline.fit(X_train, y_train)
+        if num_class >= 2:
+            y_pred = model_pipeline.predict_proba(X_test)
+        else:
+            y_pred = model_pipeline.predict(X_test)
+        return y_pred
+
+    def run_subdir(self, subdir, model, batch_size: int = 8, task_type=None, seed: int = 42, *args, **kwargs):
+        X_train, X_test, y_train, y_test = self._get_split(subdir, test_size=0.3, random_state=seed)
+        num_classes = get_num_classes(y_train, task_type)
+        y_train = prepare_target_for_eval(y_train, num_classes)
+        log.debug(f"{num_classes=}")
+        y_pred = self._run_model(model, num_classes, X_train, y_train, X_test, batch_size=batch_size, *args, **kwargs)
+        y_pred = cast_to_ndarray(y_pred)
+
+        y_test = prepare_target_for_eval(y_test, num_classes=num_classes)
+        return self.eval(model.__class__.__name__, get_last_two_folders(subdir), y_test, y_pred, num_classes, seed)
+
+
 class ModifiedBenchmark(Benchmark):
     def run_subdir(self, subdir, model, batch_size: int = 8, seed: int = 42, *args, **kwargs):
         X_train, X_test, y_train, y_test = self._get_split(subdir, test_size=0.1, random_state=seed)
@@ -181,7 +225,7 @@ class ModifiedBenchmark(Benchmark):
         y_pred = cast_to_ndarray(y_pred)
 
         y_test = prepare_target_for_eval(y_test, num_classes=num_classes)
-        metrics = eval(y_test, y_pred, num_classes=num_classes, is_prob=False)
+        metrics = eval(y_test, y_pred, is_prob=False)
         log.debug(f"{metrics=}")
         results = {
             "dataset": get_last_two_folders(subdir),

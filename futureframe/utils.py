@@ -2,6 +2,7 @@ import functools
 import os
 import random
 import time
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -186,7 +187,7 @@ def cast_to_tensor(x: Tensor | list | np.ndarray | pd.Series | pd.DataFrame) -> 
         raise ValueError(f"unknown dtype: {type(x)}")
 
 
-def cast_to_ndarray(x: Tensor | list | np.ndarray | pd.Series | pd.DataFrame) -> np.ndarray:
+def cast_to_ndarray(x: Tensor | list | np.ndarray | pd.Series | pd.DataFrame | Any) -> np.ndarray:
     if isinstance(x, np.ndarray):
         return x
     elif isinstance(x, list):
@@ -201,7 +202,7 @@ def cast_to_ndarray(x: Tensor | list | np.ndarray | pd.Series | pd.DataFrame) ->
         raise ValueError(f"unknown dtype: {type(x)}")
 
 
-def cast_to_series(x: Tensor | list | np.ndarray | pd.Series | pd.DataFrame) -> pd.Series:
+def cast_to_series(x: Tensor | list | np.ndarray | pd.Series | pd.DataFrame | Any) -> pd.Series:
     if isinstance(x, pd.Series):
         return x
     elif isinstance(x, list):
@@ -215,8 +216,8 @@ def cast_to_series(x: Tensor | list | np.ndarray | pd.Series | pd.DataFrame) -> 
             return x.iloc[:, 0]
         else:
             raise ValueError("DataFrame has more than one column and cannot be converted to pd.Series")
-    else:
-        raise ValueError(f"unknown dtype: {type(x)}")
+
+    raise ValueError(f"unknown dtype: {type(x)}")
 
 
 def get_last_two_folders(path):

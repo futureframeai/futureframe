@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder, QuantileTransformer
 
-from futureframe.data_types import ColumnDtype, TargetType, ValueDtype, valuedtype_to_columndtype
+from futureframe.types import ColumnDtype, TargetType, ValueDtype, valuedtype_to_columndtype
 from futureframe.utils import cast_to_ndarray, cast_to_series
 
 warnings.filterwarnings("ignore", message="n_quantiles.*n_samples")
@@ -240,7 +240,13 @@ def get_num_classes_classification(y):
     return num_classes
 
 
-def get_num_classes(y: TargetType):
+def get_num_classes(y: TargetType, task_type: Optional[str] = None):
+    if task_type is not None:
+        if task_type == "classification":
+            return get_num_classes_classification(y)
+        if task_type == "regression":
+            return 1
+
     y = cast_to_series(y)
     log.debug(f"{y=}")
     # Check it dtype is numeric and float
@@ -253,19 +259,25 @@ def get_num_classes(y: TargetType):
             if n_unique == 2:
                 return 2
             if n_unique > 0.1 * len(y):
-                # regression heuristics: if more than 33% of the values are int and unique, it is regression
+                # regression heuristics: if more than 10% of the values are int and unique, it is regression
                 return 1
+            # if not y.min() == 0 or y.min() == 1:
+            #     return 1
             return get_num_classes_classification(y.astype(int))
         return 1
     return get_num_classes_classification(y)
 
 
-def encode_target_label(y: pd.Series):
+def encode_target_label(y: pd.Series, return_le=False):
     # encode target label
+    y = cast_to_series(y)
     name = y.name
     index = y.index
-    y = LabelEncoder().fit_transform(y.values)
+    le = LabelEncoder().fit(y)
+    y = le.transform(y.values)
     y = pd.Series(y, index=index, name=name)
+    if return_le:
+        return y, le
     return y
 
 
@@ -278,7 +290,7 @@ def prepare_target_for_eval(y: TargetType, num_classes: Optional[int] = None) ->
         le = LabelEncoder()
         y = le.fit_transform(y)
 
-    return y
+    return y.reshape(-1)
 
 
 def prepare_pred_for_eval(y: TargetType, num_classes: Optional[int] = None) -> np.ndarray:

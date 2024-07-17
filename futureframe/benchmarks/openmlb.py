@@ -1,20 +1,9 @@
 import logging
 import os
-from pathlib import Path
 
 import openml
-import pandas as pd
-from openml import config
-from openml.tasks import TaskType
-from sklearn.datasets import fetch_openml
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from tqdm import tqdm
 
-from futureframe import config
-from futureframe.benchmarks.base import Benchmark, ModifiedBenchmark
-from futureframe.evaluate import eval
-from futureframe.registry import create_predictor, get_predictor_class_by_idx
+from futureframe.benchmarks.base import BaselineBenchmark, Benchmark, ModifiedBenchmark
 
 log = logging.getLogger(os.path.basename(__file__))
 
@@ -41,27 +30,16 @@ def get_links_from_dataset_ids(data_ids):
 
 def list_links_from_openml_benchmark_suite(benchmark_id: str = "OpenML-CC18"):
     data_ids = list_dataset_ids_from_openml_benchmark_suite(benchmark_id)
-    return get_links_from_dataset_ids(data_ids)
+    links_list = get_links_from_dataset_ids(data_ids)
+    # print in a way that I can copy and paste
 
-
-class OpenMLBenchmark(Benchmark):
-    def __init__(
-        self,
-        openmlb_id: str = "OpenML-CC18",
-        csv_results_name: str = "benchmark.csv",
-        datasets_root: str = config.DATASETS_ROOT,
-        csv_results_root: str = config.RESULTS_ROOT,
-        download=True,
-        force_download=False,
-        resume=False,
-        verbose=False,
-    ) -> None:
-        self.datasets_links = list_links_from_openml_benchmark_suite(openmlb_id)
-        log.debug(f"{len(self.datasets_links)=}")
-        super().__init__(csv_results_name, datasets_root, csv_results_root, download, force_download, resume, verbose)
+    for link in links_list:
+        print(f'"{link}",')
 
 
 class OpenMLCC18Benchmark(Benchmark):
+    """Benchmark id: "OpenML-CC18"""
+
     datasets_links = [  # 72 datasets
         "https://openml.org/d/3",
         "https://openml.org/d/6",
@@ -142,122 +120,66 @@ class ModifOpenMLCC18Benchmark(OpenMLCC18Benchmark, ModifiedBenchmark):
     pass
 
 
-def main(
-    benchmark_id: str = "OpenML-CC18",
-    method_name: str = "RandomForest",
-    method_id: int = None,
-    data_dir: str = "datasets/",
-    results_path: str = "results/benchmark.csv",
-    seed: int = 42,
-    resume: bool = False,
-    logging_level: str = "INFO",
-    N=10240,
-    n=1024,
-):
-    logging.basicConfig(level=logging.getLevelName(logging_level))
-    path = Path(__file__).parent
-    config.cache_directory = path / data_dir
-    Path(results_path).parent.mkdir(parents=True, exist_ok=True)
+class OpenMLCC18BaselineBenchmark(OpenMLCC18Benchmark, BaselineBenchmark):
+    pass
 
-    benchmark_suite = openml.study.get_suite(benchmark_id)
-    log.debug(f"{benchmark_suite=}")
 
-    if method_id is not None:
-        method_name = get_predictor_class_by_idx(idx).__name__
+class OpenMLBinaryClassificationBenchmark(Benchmark):
+    """Benchmark id:"""
 
-    cfg = dict(method=method_name, benchmark_suite=benchmark_id, seed=seed)
+    datasets_links = [  # 72 datasets
+    ]
 
-    for task_id in tqdm(benchmark_suite.tasks):  # iterate over all tasks
-        log.debug(f"Processing task {task_id}")
-        try:
-            # check if task is completed
-            df = pd.read_csv(results_path) if os.path.exists(results_path) else None
-            if df is not None and resume:
-                if df.query(f"task_id == {task_id} and method == '{method_name}'").shape[0] > 0:
-                    log.info(f"Task {task_id} already completed for {method_name}. Skipping.")
-                    continue
 
-            task = openml.tasks.get_task(task_id, download_data=False, download_qualities=False)
+class OpenMLRegressionBenchmark(Benchmark):
+    """Benchmark id: OpenML-CTR23"""
 
-            dataset = fetch_openml(
-                data_id=task.dataset_id,
-                data_home=data_dir,
-                as_frame=True,
-                return_X_y=False,
-                parser="auto",
-            )
-            dataset.frame.info()
-            X, y = dataset.data, dataset.target
-            name = dataset.details["name"]
-            log.debug(f"{X=}")
-            log.debug(f"{y=}")
+    datasets_links = [
+        "https://openml.org/d/44956",
+        "https://openml.org/d/44957",
+        "https://openml.org/d/44958",
+        "https://openml.org/d/44959",
+        "https://openml.org/d/44963",
+        "https://openml.org/d/44964",
+        "https://openml.org/d/44965",
+        "https://openml.org/d/44966",
+        "https://openml.org/d/44969",
+        "https://openml.org/d/44971",
+        "https://openml.org/d/44972",
+        "https://openml.org/d/44973",
+        "https://openml.org/d/44974",
+        "https://openml.org/d/44975",
+        "https://openml.org/d/44976",
+        "https://openml.org/d/44977",
+        "https://openml.org/d/44978",
+        "https://openml.org/d/44979",
+        "https://openml.org/d/44980",
+        "https://openml.org/d/44981",
+        "https://openml.org/d/44983",
+        "https://openml.org/d/44984",
+        "https://openml.org/d/44987",
+        "https://openml.org/d/44989",
+        "https://openml.org/d/44990",
+        "https://openml.org/d/44992",
+        "https://openml.org/d/44993",
+        "https://openml.org/d/45012",
+        "https://openml.org/d/41021",
+        "https://openml.org/d/44960",
+        "https://openml.org/d/44962",
+        "https://openml.org/d/44967",
+        "https://openml.org/d/44970",
+        "https://openml.org/d/44994",
+        "https://openml.org/d/45402",
+    ]
 
-            column_names = X.columns
-            numeric_features = X.select_dtypes(include=["int64", "float64", "int32", "float32", "number"]).columns
-            categorical_features = X.select_dtypes(include=["object", "category"]).columns
-            log.debug(f"{column_names=}")
-            log.debug(f"{numeric_features=}")
-            log.debug(f"{categorical_features=}")
+    pass
 
-            task = openml.tasks.get_task(task_id)  # download the OpenML task
-            log.debug(f"{task=}")
 
-            task_type = ""
-            if task.task_type_id == TaskType.SUPERVISED_REGRESSION:
-                task_type = "regression"
-            elif task.task_type_id == TaskType.SUPERVISED_CLASSIFICATION:
-                class_labels = task.class_labels
-                num_classes = len(class_labels)
-                log.debug(f"{class_labels=}")
-
-                if num_classes == 2:
-                    task_type = "binary_classification"
-                else:
-                    task_type = "multiclass_classification"
-
-                le = LabelEncoder()
-                y = le.fit_transform(y)
-            else:
-                log.error(f"Unknown task type: {task.task_type_id}")
-                continue
-
-            X_train, X_test, y_train, y_test = train_test_split(X, y)
-
-            X_train = X_train[:N]
-            y_train = y_train[:N]
-            X_test = X_test[:n]
-            y_test = y_test[:n]
-
-            predictor = create_predictor(
-                method_name,
-                column_names,
-                task_type,
-                numeric_features,
-                categorical_features,
-            )
-            log.info("Fitting...")
-            predictor.fit(X_train, y_train)
-            log.info("Predicting...")
-            y_pred = predictor.predict(X_test)
-
-            res = eval(y_test, y_pred, task_type)
-            results = {"task_id": task_id, "name": name, **cfg, **res}
-            df = pd.DataFrame([results])
-
-            # append the results to a CSV file
-            if not os.path.exists(results_path):
-                df.to_csv(results_path, index=False)
-            else:
-                df.to_csv(results_path, mode="a", header=False, index=False)
-
-            print(df.to_markdown(index=False))
-
-        except Exception as e:
-            log.error(f"Error processing task {task_id}: {e}")
-            continue
+class OpenMLRegressionBaselineBenchmark(OpenMLRegressionBenchmark, BaselineBenchmark):
+    pass
 
 
 if __name__ == "__main__":
     from fire import Fire
 
-    Fire({"main": main, "list": list_links_from_openml_benchmark_suite})
+    Fire({"list": list_links_from_openml_benchmark_suite})

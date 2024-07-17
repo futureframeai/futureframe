@@ -1,8 +1,6 @@
 import logging
 
 from futureframe.benchmarks.base import Benchmark, ModifiedBenchmark
-from futureframe.evaluate import bootstrap_eval, eval
-from futureframe.features import get_num_classes, prepare_target_for_eval
 
 log = logging.getLogger(__name__)
 
@@ -65,23 +63,3 @@ class CM2Benchmark(Benchmark):
 
 class ModifiedCM2Benchmark(ModifiedBenchmark, CM2Benchmark):
     pass
-
-
-def test():
-    logging.basicConfig(level=logging.DEBUG)
-    benchmark = CM2Benchmark(download=True)
-    for idx, (X_train, y_train, X_val, y_val) in enumerate(benchmark.benchmark_iter()):
-        num_classes = get_num_classes(y_train)
-        y_val = prepare_target_for_eval(y_val, num_classes=num_classes)
-        metrics = eval(y_val, y_val, num_classes=num_classes)
-        bootstrap_metrics = bootstrap_eval(y_val, y_val, num_classes=num_classes, n_iterations=10, verbose=True)
-        print(f"{num_classes=}")
-        print(f"{y_val.shape}")
-        print(f"{metrics=}")
-        print(f"{bootstrap_metrics=}")
-
-
-if __name__ == "__main__":
-    from fire import Fire
-
-    Fire(test)

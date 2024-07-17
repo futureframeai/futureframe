@@ -1,5 +1,6 @@
 import logging
 
+from catboost import CatBoostClassifier, CatBoostRegressor
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import (
     GradientBoostingClassifier,
@@ -7,40 +8,73 @@ from sklearn.ensemble import (
     RandomForestClassifier,
     RandomForestRegressor,
 )
-from sklearn.feature_selection import SelectPercentile, chi2
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, RobustScaler, StandardScaler
+from xgboost import XGBClassifier, XGBRegressor
 
 log = logging.getLogger(__name__)
 
+scaler_registry = {
+    "StandardScaler": StandardScaler,
+    "MinMaxScaler": MinMaxScaler,
+    "RobustScaler": RobustScaler,
+}
 
-def get_baseline_predictor(predictor_name, task_type, **kwargs):
-    if predictor_name == "RandomForest":
-        if task_type == "regression":
-            p = RandomForestRegressor(**kwargs)
-        else:
-            p = RandomForestClassifier(**kwargs)
+baselines_registry = {
+    "RandomForest": (RandomForestClassifier, RandomForestRegressor),
+    "GradientBoosting": (GradientBoostingClassifier, GradientBoostingRegressor),
+    "XGB": (XGBClassifier, XGBRegressor),
+    "CatBoost": (CatBoostClassifier, CatBoostRegressor),
+}
 
-    elif predictor_name == "GradientBoosting":
-        if task_type == "regression":
-            p = GradientBoostingRegressor(**kwargs)
-        else:
-            p = GradientBoostingClassifier(**kwargs)
+task_type_by_num_classes = {
+    2: "classification",
+    1: "regression",
+}
 
-    else:
-        raise ValueError(f"Predictor {predictor_name} not supported")
-    return p
+tast_type_index = {
+    "classification": 0,
+    "regression": 1,
+}
 
 
-def create_baseline(predictor_name: str, task_type: str, numeric_features, categorical_features, **kwargs):
+regressor_registry = {}
+
+
+def get_task_type(num_classes: int):
+    return task_type_by_num_classes.get(num_classes, "classification")
+
+
+def create_baseline(predictor_name: str, task_type: str, **kwargs):
+    predictor_cls = create_baseline_cls(predictor_name, task_type)
+    return predictor_cls(**kwargs)
+
+
+def create_baseline_cls(predictor_name: str, task_type: str):
+    index = tast_type_index[task_type]
+    try:
+        baseline = baselines_registry[predictor_name]
+    except KeyError as e:
+        log.error(f"Predictor {predictor_name} not found in the registry.")
+        raise e
+    return baseline[index]
+
+
+def create_baseline_pipeline(
+    predictor,
+    numerical_features,
+    categorical_features,
+    numerical_scaler="StandardScaler",
+    **kwargs,
+):
     categorical_transformer = Pipeline(
         steps=[
+            ("inputer", SimpleImputer(strategy="constant", fill_value="missing")),
             ("encoder", OneHotEncoder(handle_unknown="ignore")),
-            ("selector", SelectPercentile(chi2, percentile=50)),
         ]
     )
-    numeric_transformer = Pipeline(
+    numerical_transformer = Pipeline(
         steps=[
             ("imputer", SimpleImputer(strategy="median")),
             ("scaler", StandardScaler()),
@@ -48,16 +82,15 @@ def create_baseline(predictor_name: str, task_type: str, numeric_features, categ
     )
     preprocessor = ColumnTransformer(
         transformers=[
-            ("num", numeric_transformer, numeric_features),
+            ("num", numerical_transformer, numerical_features),
             ("cat", categorical_transformer, categorical_features),
         ]
     )
-    p = get_baseline_predictor(predictor_name, task_type, **kwargs)
-    predictor = Pipeline(
+    pipeline = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
-            ("predictor", p),
+            ("predictor", predictor),
         ]
     )
 
-    return predictor
+    return pipeline

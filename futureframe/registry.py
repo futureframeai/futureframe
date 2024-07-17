@@ -3,7 +3,7 @@
 import logging
 from typing import Callable
 
-from futureframe.baselines import create_baseline
+from futureframe.baselines import create_baseline_pipeline
 from futureframe.models.tabtext import TabText, TabTextXGBoostClassifier
 
 log = logging.getLogger(__name__)
@@ -123,7 +123,7 @@ def create_predictor(
         ```
     """
     if predictor_name not in predictors_registry:
-        return create_baseline(predictor_name, task_type, numeric_features, categorical_features, **kwargs)
+        return create_baseline_pipeline(predictor_name, task_type, numeric_features, categorical_features, **kwargs)
 
     predictor_class = get_predictor_class_by_name(predictor_name)
     if predictor_class is None:

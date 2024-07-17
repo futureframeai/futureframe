@@ -45,7 +45,7 @@ def eval_regression(y_true: np.ndarray, y_pred: np.ndarray):
 
 
 def eval_multiclass_clf(y_true: np.ndarray, y_pred: np.ndarray):
-    y_pred_hard = np.argmax(y_pred, axis=1)
+    y_pred_hard = np.argmax(y_pred, axis=1).reshape(-1)
     acc = accuracy_score(y_true, y_pred_hard)
     f1 = f1_score(y_true, y_pred_hard, average="macro")
     precision = precision_score(y_true, y_pred_hard, average="macro")
@@ -53,23 +53,30 @@ def eval_multiclass_clf(y_true: np.ndarray, y_pred: np.ndarray):
     return dict(accuracy=acc, f1=f1, precision=precision, recall=recall)
 
 
-def eval(y_true: np.ndarray, y_pred: np.ndarray, num_classes: int, non_none_only: bool = False, is_prob: bool = False):
+def eval(y_true: np.ndarray, y_pred: np.ndarray, return_non_none_metrics_only: bool = False, is_prob: bool = False):
+    if y_pred.ndim > 1:
+        num_classes = y_pred.shape[1]
+    else:
+        num_classes = 1
     results = {k: None for k in METRICS}
     res = {}
     y_true = prepare_target_for_eval(y_true, num_classes)
-    if num_classes == 2:
+
+    if num_classes == 1:
+        y_pred = y_pred.reshape(-1)
+        res = eval_regression(y_true, y_pred)
+    elif num_classes == 2:
+        y_pred = y_pred[:, 1].reshape(-1)
         res = eval_binary_clf(y_true, y_pred, is_prob=is_prob)
     elif num_classes > 2:
         res = eval_multiclass_clf(y_true, y_pred)
-    elif num_classes == 1:
-        res = eval_regression(y_true, y_pred)
     else:
         raise ValueError("num_classes must be >= 1")
 
     for k, v in res.items():
         results[k] = v
 
-    if non_none_only:
+    if return_non_none_metrics_only:
         results = {k: v for k, v in results.items() if v is not None}
 
     return results
@@ -94,7 +101,7 @@ def bootstrap_eval(
         y_pred_sample = y_pred[indices]
 
         # Evaluate on the sample
-        results = eval(y_true_sample, y_pred_sample, num_classes, non_none_only=True)
+        results = eval(y_true_sample, y_pred_sample, return_non_none_metrics_only=True)
 
         # Collect the results
         for metric in results:

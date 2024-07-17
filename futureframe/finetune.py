@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 import futureframe as ff
-from futureframe.data_types import TargetType
+from futureframe.types import TargetType
 from futureframe.evaluate import eval_binary_clf, eval_multiclass_clf, eval_regression
 from futureframe.features import prepare_target_for_eval
 from futureframe.tabular_datasets import FeatureDataset, SupervisedDataset
