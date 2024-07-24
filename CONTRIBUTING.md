@@ -74,6 +74,8 @@ Docs:
 # Dev
 poetry run mkdocs serve
 # Build
+python scripts/gen_docs_index.py
+python scripts/gen_docs_ref_pages.py
 poetry run mkdocs build -d dist/docs
 # Publish
 # poetry run mkdocs gh-deploy -d dist/docs -b docs
