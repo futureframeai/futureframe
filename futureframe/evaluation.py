@@ -1,7 +1,5 @@
-"""# Evaluation Module 
-
-The evaluation module provides a comprehensive suite of functions to assess the performance of various\
-predictive models. Whether you're working with regression, binary classification, or multiclass classification, \
+"""
+Whether you're working with regression, binary classification, or multiclass classification, \
 this module is designed to offer flexibility in evaluating your model's predictions against the true outcomes.
 """
 
@@ -26,12 +24,12 @@ from futureframe.data.features import prepare_target_for_eval
 log = logging.getLogger(__name__)
 
 
-METRICS = ["accuracy", "auc", "f1", "precision", "recall", "mse", "mae", "r2"]
+METRICS = ["accuracy", "auc", "f1", "precision", "recall", "mse", "mae", "r2", "ap"]
 
 
 def eval_binary_classification(
     y_true: np.ndarray, y_pred: np.ndarray, y_pred_is_probability: bool = False, threshold: float | None = None
-):
+) -> dict[str, float]:
     """
     Evaluate the performance of a binary classification model.
 
@@ -39,12 +37,12 @@ def eval_binary_classification(
         y_true (np.ndarray): The true labels of the binary classification problem.
         y_pred (np.ndarray): The predicted labels or logits of the binary classification problem.
         y_pred_is_probability (bool, optional): Whether the predicted values are probabilities or logits.
-            Defaults to False.
         threshold (float | None, optional): The threshold value for converting probabilities to binary labels.
-            If None, the default threshold is used. Defaults to None.
+            If None, the default threshold is used.
 
     Returns:
         dict: A dictionary containing the evaluation metrics:
+
             - accuracy: The accuracy of the model.
             - auc: The area under the ROC curve.
             - f1: The F1 score.
@@ -69,7 +67,7 @@ def eval_binary_classification(
     return dict(accuracy=acc, auc=auc, f1=f1, precision=precision, recall=recall, ap=ap)
 
 
-def eval_regression(y_true: np.ndarray, y_pred: np.ndarray):
+def eval_regression(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
     """
     Evaluate the performance of a regression model by calculating various metrics.
 
@@ -78,10 +76,11 @@ def eval_regression(y_true: np.ndarray, y_pred: np.ndarray):
         y_pred (np.ndarray): The predicted values of the target variable.
 
     Returns:
-        dict: A dictionary containing the calculated metrics.
+        dict: A dictionary containing the calculated metrics:
+
             - mse (float): The mean squared error.
             - mae (float): The mean absolute error.
-            - r2 (float): The coefficient of determination (R^2).
+            - r2 (float): The coefficient of determination ($R^2$).
     """
     mse = mean_squared_error(y_true, y_pred)
     mae = mean_absolute_error(y_true, y_pred)
@@ -89,7 +88,7 @@ def eval_regression(y_true: np.ndarray, y_pred: np.ndarray):
     return dict(mse=mse, mae=mae, r2=r2)
 
 
-def eval_multiclass_clf(y_true: np.ndarray, y_pred: np.ndarray):
+def eval_multiclass_clf(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
     """
     Evaluate the performance of a multiclass classification model.
 
@@ -98,11 +97,12 @@ def eval_multiclass_clf(y_true: np.ndarray, y_pred: np.ndarray):
     - y_pred (np.ndarray): Predicted labels of the samples.
 
     Returns:
-    - dict: A dictionary containing the evaluation metrics.
-        - accuracy: Accuracy score.
-        - f1: F1 score.
-        - precision: Precision score.
-        - recall: Recall score.
+        dict: A dictionary containing the evaluation metrics:
+
+            - accuracy: Accuracy score.
+            - f1: F1 score.
+            - precision: Precision score.
+            - recall: Recall score.
     """
     y_pred_hard = np.argmax(y_pred, axis=1).reshape(-1)
     acc = accuracy_score(y_true, y_pred_hard)
@@ -118,16 +118,16 @@ def eval(
     return_non_none_metrics_only: bool = False,
     y_pred_is_probability: bool = False,
     num_classes: int | None = None,
-) -> dict:
+) -> dict[str, float]:
     """
     Evaluate the performance of a model's predictions.
 
     Args:
         y_true (np.ndarray): The true labels.
         y_pred (np.ndarray): The predicted labels.
-        return_non_none_metrics_only (bool, optional): Whether to return only the metrics with non-None values. Defaults to False.
-        y_pred_is_probability (bool, optional): Whether the predicted labels are probabilities. Defaults to False.
-        num_classes (int | None, optional): The number of classes. Defaults to None.
+        return_non_none_metrics_only (bool, optional): Whether to return only the metrics with non-None values.
+        y_pred_is_probability (bool, optional): Whether the predicted labels are probabilities.
+        num_classes (int | None, optional): The number of classes.
 
     Returns:
         dict: A dictionary containing the evaluation metrics.
