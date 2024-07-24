@@ -24,7 +24,7 @@ class Task(ABC):
         eval_fn (callable): The evaluation function used for evaluating the task.
         num_classes (int): The number of classes in the task.
         best_metric (str): The metric used to determine the best model during training.
-        less_is_better (bool, optional): Whether a lower value of the best metric is better. Defaults to False.
+        less_is_better (bool, optional): Whether a lower value of the best metric is better.
     """
 
     def __init__(
@@ -39,7 +39,7 @@ class Task(ABC):
             eval_fn (callable): The evaluation function for the task.
             num_classes (int): The number of classes for classification tasks.
             best_metric (str): The metric used to determine the best model.
-            less_is_better (bool, optional): Whether a lower value of the best metric is better. Defaults to False.
+            less_is_better (bool, optional): Whether a lower value of the best metric is better.
         """
         self.name = name
         self.loss_fn = loss_fn

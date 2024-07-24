@@ -7,9 +7,11 @@ log = logging.getLogger(__name__)
 def get_constant_lr_scheduler(optimizer, lr: float, *args, **kwargs):
     """
     Returns a learning rate scheduler that keeps the learning rate constant.
+
     Args:
         optimizer (torch.optim.Optimizer): The optimizer for which to schedule the learning rate.
         lr (float): The base learning rate.
+
     Returns:
         torch.optim.lr_scheduler.ConstantLR: The learning rate scheduler.
     """
@@ -26,13 +28,12 @@ def get_linear_warmup_cos_lr_scheduler(
         optimizer (torch.optim.Optimizer): The optimizer for which to schedule the learning rate.
         max_steps (int): The total number of training steps.
         lr (float): The base learning rate.
-        start_factor (float, optional): The factor by which to multiply the base learning rate at the start of the warmup phase. Defaults to 0.3.
-        end_factor (float, optional): The factor by which to multiply the base learning rate at the end of the cosine annealing phase. Defaults to 0.1.
-        warmup_fraction (float, optional): The fraction of total steps to use for linear warmup. Defaults to 0.02.
+        start_factor (float, optional): The factor by which to multiply the base learning rate at the start of the warmup phase.
+        end_factor (float, optional): The factor by which to multiply the base learning rate at the end of the cosine annealing phase.
+        warmup_fraction (float, optional): The fraction of total steps to use for linear warmup.
 
     Returns:
         torch.optim.lr_scheduler._LRScheduler: The learning rate scheduler.
-
     """
     total_warmup_iters = int(warmup_fraction * max_steps)
     total_cosine_iters = int(max_steps * (1 - warmup_fraction))
@@ -59,9 +60,21 @@ lr_scheduler_registry = dict(
 )
 
 
-def create_lr_scheduler(lr_scheduler_name: str):
+def create_lr_scheduler(lr_scheduler_name: str, **kwargs):
+    """
+    Create a learning rate scheduler based on the given name.
+
+    Args:
+        lr_scheduler_name (str): The name of the learning rate scheduler.
+
+    Returns:
+        The learning rate scheduler corresponding to the given name.
+
+    Raises:
+        KeyError: If the learning rate scheduler with the given name is not found in the registry.
+    """
     try:
-        return lr_scheduler_registry[lr_scheduler_name]
+        return lr_scheduler_registry[lr_scheduler_name](**kwargs)
     except KeyError as e:
         log.error(f"Learning rate scheduler {lr_scheduler_name} not found in the registry.")
         raise e

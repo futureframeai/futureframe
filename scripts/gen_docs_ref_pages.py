@@ -21,6 +21,7 @@ ignore_list = [
     "__init__",
     "__main__",
     "_registry",
+    "types",
 ]
 
 for path in sorted(src.rglob("*.py")):

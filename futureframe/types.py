@@ -1,16 +1,16 @@
 from dataclasses import asdict, is_dataclass
 from datetime import datetime
 from enum import Enum, auto
+from typing import Literal
 
 import numpy as np
 import pandas as pd
 from torch import Tensor
-from typing import Literal
 
 TargetType = pd.DataFrame | pd.Series | list | np.ndarray | Tensor
 
 # Define the type alias
-TaskType = Literal["classification", "regression"]
+TaskType = Literal["classification", "regression", "multiclass_classification"]
 
 
 def dataclass_to_dict(obj):

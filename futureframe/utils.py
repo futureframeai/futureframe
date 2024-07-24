@@ -20,7 +20,6 @@ def freeze(layer, verbose=False):
     Args:
         layer (nn.Module): The layer whose parameters need to be frozen.
         verbose (bool, optional): If True, prints a message for each parameter that is frozen.
-            Defaults to False.
     """
     for child in layer.children():
         for param in child.parameters():

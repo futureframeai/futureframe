@@ -84,7 +84,7 @@ class BaseConfig:
 
         Args:
             path (str): The path to save the JSON file.
-            indent (int, optional): The indentation level for the JSON file. Defaults to 4.
+            indent (int, optional): The indentation level for the JSON file.
         """
         with open(path, "w") as f:
             f.write(json.dumps(self.to_dict(), indent=indent))

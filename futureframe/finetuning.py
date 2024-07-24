@@ -12,7 +12,7 @@ from tqdm import tqdm
 from futureframe.data.features import prepare_target_for_eval
 from futureframe.data.tabular_datasets import SupervisedDataset
 from futureframe.optim import get_linear_warmup_cos_lr_scheduler
-from futureframe.tasks import get_task
+from futureframe.tasks import create_task
 from futureframe.utils import get_num_parameters, seed_all, send_to_device_recursively
 
 log = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ def finetune(
     seed_all(seed)
     device = next(model.parameters()).device
     log.info(f"Using device: {device}")
-    task = get_task(num_classes)
+    task = create_task(num_classes)
     # fit tokenizer
     model.tokenizer(X_train, fit=True)
     y_train = prepare_target_for_eval(y_train, num_classes=num_classes)
