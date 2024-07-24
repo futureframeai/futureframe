@@ -14,24 +14,44 @@ from torch import Tensor, nn
 
 
 def freeze(layer, verbose=False):
+    """
+    Freezes the parameters of a given layer.
+
+    Args:
+        layer (nn.Module): The layer whose parameters need to be frozen.
+        verbose (bool, optional): If True, prints a message for each parameter that is frozen.
+            Defaults to False.
+    """
     for child in layer.children():
         for param in child.parameters():
             param.requires_grad = False
+            if verbose:
+                print(f"Parameter '{param}' frozen.")
 
 
-def unfreeze(layer):
+def unfreeze(layer, verbose=False):
+    """
+    Unfreezes the given layer by setting the `requires_grad` attribute of all its parameters to True.
+
+    Args:
+        layer (nn.Module): The layer to unfreeze.
+    """
     for child in layer.children():
         for param in child.parameters():
             param.requires_grad = True
+            if verbose:
+                print(f"Parameter '{param}' unfrozen.")
 
 
 def print_non_frozen_layers(model: nn.Module):
     """
-    Print the layers of a PyTorch model that are not frozen (i.e., require gradients).
+    Prints the names of non-frozen layers in the given model.
 
-    Parameters:
-    - model: nn.Module
-        The PyTorch model to inspect.
+    Args:
+        model (nn.Module): The model to inspect.
+
+    Returns:
+        None
     """
     print("Non-frozen layers:")
     for name, param in model.named_parameters():
@@ -52,32 +72,57 @@ def get_parameter_names(model, forbidden_layer_types):
     return result
 
 
-def get_auto_device():
-    # "mps"
+def get_auto_device(index: int | None = None):
+    """
+    Returns the appropriate torch device based on the availability of CUDA and MPS.
+
+    Parameters:
+        index (int | None): The index of the CUDA device to use. If None, the default CUDA device is used.
+
+    Returns:
+        torch.device: The selected torch device.
+    """
     if torch.backends.mps.is_available():
         return torch.device("mps")
     if torch.cuda.is_available():
+        if index is not None:
+            return torch.device(f"cuda:{index}")
         return torch.device("cuda")
     return torch.device("cpu")
 
 
-def send_to_device_recursively(data, device):
+def send_to_device_recursively(data: dict | Tensor | Any, device, **kwargs):
     if isinstance(data, dict):
-        return {k: send_to_device_recursively(v, device) for k, v in data.items()}
+        return {k: send_to_device_recursively(v, device, **kwargs) for k, v in data.items()}
     if isinstance(data, Tensor):
-        return data.to(device)
+        return data.to(device, **kwargs)
     return data
 
 
 def seed_all(seed: int = 42):
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    # If using torch's multi-GPU functionality
+    if torch.cuda.is_available() and torch.cuda.device_count() > 1:
+        torch.cuda.manual_seed_all(seed)
 
 
-def get_num_parameters(model: nn.Module):
+def get_num_parameters(model: nn.Module) -> tuple[int, int]:
+    """
+    Calculates the number of trainable and non-trainable parameters in a PyTorch model.
+
+    Args:
+        model (nn.Module): The PyTorch model.
+
+    Returns:
+        tuple[int, int]: A tuple containing the number of trainable parameters and the number of non-trainable parameters.
+    """
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     non_trainable_params = sum(p.numel() for p in model.parameters() if not p.requires_grad)
     return trainable_params, non_trainable_params
@@ -92,15 +137,7 @@ def get_activation_fn(activation):
     }
     if activation in mapping:
         return mapping[activation]
-    raise RuntimeError(f"activation should be one of {list(mapping.keys())}, not {activation}")
-
-
-def unzip(iterable):
-    raise NotImplementedError
-
-
-def curl_download(url, output_path):
-    raise NotImplementedError
+    raise ValueError(f"Invalid activation function '{activation}'. Available options are: {', '.join(mapping.keys())}.")
 
 
 def read_parquet(filename: str):
@@ -131,11 +168,10 @@ def print_tensor(t: torch.Tensor):
 
 
 def preprocess_text(text: str) -> list[str]:
-    # gpt2_pattern = r"""'s|'t|'re|'ve|'m|'ll|'d| ?[\p{L}]+| ?[\p{N}]+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
-    gpt4_pattern = (
+    pattern = (
         r"'(?i:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?+\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]++[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s+"
     )
-    compiled_pattern = regex.compile(gpt4_pattern)
+    compiled_pattern = regex.compile(pattern)
     # split the text up into text ch
     text_chunks = regex.findall(compiled_pattern, text)
     if len(text_chunks) == 0:
@@ -158,7 +194,7 @@ def time_benchmark(func):
     return wrapper
 
 
-def human_readable_bytes(size_in_bytes):
+def human_readable_bytes(size_in_bytes: int) -> str:
     # Define the size units in a tuple
     units = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
 
@@ -177,10 +213,22 @@ def human_readable_bytes(size_in_bytes):
 
 
 def cast_to_tensor(x: Tensor | list | np.ndarray | pd.Series | pd.DataFrame) -> Tensor:
-    if isinstance(x, torch.Tensor):
+    """
+    Casts the input `x` to a PyTorch tensor.
+
+    Args:
+        x (Tensor | list | np.ndarray | pd.Series | pd.DataFrame): The input data to be casted.
+
+    Returns:
+        Tensor: The input data casted to a PyTorch tensor.
+
+    Raises:
+        ValueError: If the input data type is not supported.
+    """
+    if isinstance(x, Tensor):
         return x
     elif isinstance(x, list):
-        return torch.Tensor(x)
+        return Tensor(x)
     elif isinstance(x, np.ndarray):
         return torch.from_numpy(x)
     else:
@@ -188,6 +236,19 @@ def cast_to_tensor(x: Tensor | list | np.ndarray | pd.Series | pd.DataFrame) -> 
 
 
 def cast_to_ndarray(x: Tensor | list | np.ndarray | pd.Series | pd.DataFrame | Any) -> np.ndarray:
+    """
+    Casts the input `x` to a NumPy ndarray.
+
+    Args:
+        x (Tensor | list | np.ndarray | pd.Series | pd.DataFrame | Any): The input object to be casted.
+
+    Returns:
+        np.ndarray: The input `x` casted to a NumPy ndarray.
+
+    Raises:
+        ValueError: If the input `x` has an unknown dtype.
+
+    """
     if isinstance(x, np.ndarray):
         return x
     elif isinstance(x, list):
@@ -203,6 +264,19 @@ def cast_to_ndarray(x: Tensor | list | np.ndarray | pd.Series | pd.DataFrame | A
 
 
 def cast_to_series(x: Tensor | list | np.ndarray | pd.Series | pd.DataFrame | Any) -> pd.Series:
+    """
+    Casts the input `x` to a pandas Series.
+
+    Parameters:
+        x (Tensor | list | np.ndarray | pd.Series | pd.DataFrame | Any): The input object to be casted.
+
+    Returns:
+        pd.Series: The input object `x` casted to a pandas Series.
+
+    Raises:
+        ValueError: If the input object `x` has an unknown data type.
+        ValueError: If the input object `x` is a DataFrame with more than one column.
+    """
     if isinstance(x, pd.Series):
         return x
     elif isinstance(x, list):
@@ -221,12 +295,9 @@ def cast_to_series(x: Tensor | list | np.ndarray | pd.Series | pd.DataFrame | An
 
 
 def get_last_two_folders(path):
-    # Normalize the path to handle different OS path separators
     path = os.path.normpath(path)
-    # Split the path into parts
     parts = path.split(os.sep)
 
-    # Get the last two folders
     if len(parts) >= 2:
         return os.path.join(parts[-2], parts[-1])
     elif len(parts) == 1:
