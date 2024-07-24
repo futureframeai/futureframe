@@ -24,6 +24,7 @@ fire = "^0.6.0"
 xgboost = "^2.1.0"
 catboost = "^1.2.5"
 sentence-transformers = "^3.0.1"
+torchmetrics = "^1.4.0.post0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.2.0"
