@@ -27,6 +27,7 @@ from transformers import BertTokenizerFast
 from futureframe import config
 from futureframe.data.encoding import BaseFeaturesToModelInput
 from futureframe.data.features import infer_majority_dtype
+from futureframe.models.base import BaseModelForFinetuning
 from futureframe.types import BaseInput, ColumnDtype
 from futureframe.utils import (
     download_and_extract,
@@ -122,6 +123,7 @@ class CM2FeaturesToModelInput(BaseFeaturesToModelInput):
         Args:
             path (str): Directory to save the tokenizer weights.
         """
+        os.makedirs(path, exist_ok=True)
         self.tokenizer.save_pretrained(path)
 
     @staticmethod
@@ -167,7 +169,7 @@ class CM2FeaturesToModelInput(BaseFeaturesToModelInput):
         return out
 
     @torch.no_grad()
-    def encode_train(self, data: pd.DataFrame) -> CM2EncodedInputs:
+    def encode(self, data: pd.DataFrame) -> dict[str, Tensor]:
         """
         Encode the training data into CM2 model inputs.
 
@@ -218,7 +220,7 @@ class CM2FeaturesToModelInput(BaseFeaturesToModelInput):
             cat_col_attn_mask=cat_col_att_mask,
             x_cat_input_ids=x_cat_input_ids,
             x_cat_attn_mask=x_cat_attn_mask,
-        )
+        ).to_dict()
 
 
 class CM2WordEmbedding(nn.Module):
@@ -703,21 +705,19 @@ class CM2Model(nn.Module):
         if download:
             self.download(checkpoints_dir)
 
-        feature_extractor = CM2FeaturesToModelInput(
+        self.input_encoder = CM2FeaturesToModelInput(
             categorical_columns=self.categorical_columns,
             numerical_columns=self.numerical_columns,
             weights_dir=checkpoints_dir,
         )
 
-        feature_processor = CM2FeatureProcessor(
+        self.feature_processor = CM2FeatureProcessor(
             hidden_dim=hidden_dim,
             hidden_dropout_prob=hidden_dropout_prob,
             vocab_freeze=vocab_freeze,
             pool_policy=pool_policy,
             weights_dir=checkpoints_dir,
         )
-
-        self.input_encoder = CM2InputEncoder(feature_extractor=feature_extractor, feature_processor=feature_processor)
 
         self.encoder = CM2Encoder(
             hidden_dim=hidden_dim,
@@ -737,10 +737,10 @@ class CM2Model(nn.Module):
         if isinstance(x, pd.DataFrame):
             device = next(self.parameters()).device
             # input is the pre-tokenized encoded inputs
-            x = self.input_encoder.feature_extractor(x).to_dict()
+            x = self.input_encoder(x)
             x = send_to_device_recursively(x, device)
 
-        embeded, _ = self.input_encoder.feature_processor(**x)
+        embeded, _ = self.feature_processor(**x)
         embeded = self.cls_token(**embeded)
         encoder_output = self.encoder(**embeded)
 
@@ -748,6 +748,7 @@ class CM2Model(nn.Module):
 
     def download(self, ckpt_dir):
         if not os.path.isfile(os.path.join(ckpt_dir, "pytorch_model.bin")):
+            os.makedirs(ckpt_dir, exist_ok=True)
             download_and_extract(
                 "https://github.com/futureframeai/futureframe/releases/download/cm2_weights/cm2.zip",
                 ckpt_dir,
@@ -757,10 +758,11 @@ class CM2Model(nn.Module):
         model_name = os.path.join(ckpt_dir, "pytorch_model.bin")
         state_dict = torch.load(model_name, map_location="cpu")
         missing_keys, unexpected_keys = self.load_state_dict(state_dict, strict=False)
-        log.info(f"load model from {ckpt_dir}")
+        log.info(f"loaded pre-trained model weights from {ckpt_dir}")
+        log.info(f"with missing keys: {missing_keys} and unexpected keys: {unexpected_keys}")
 
         # load feature extractor
-        self.input_encoder.feature_extractor.load(os.path.join(ckpt_dir, "tokenizer"))
+        self.input_encoder.load(os.path.join(ckpt_dir, "tokenizer"))
 
     def save(self, ckpt_dir):
         os.makedirs(ckpt_dir, exist_ok=True)
@@ -784,7 +786,7 @@ class CM2LinearClassifierHead(nn.Module):
         return logits
 
 
-class CM2Classifier(CM2Model):
+class CM2Classifier(CM2Model, BaseModelForFinetuning):
     """
     CM2Classifier is a classifier model based on the CM2Model architecture.
 
@@ -851,7 +853,7 @@ class CM2LinearRegressionHead(CM2LinearClassifierHead):
         super().__init__(1, hidden_dim)
 
 
-class CM2Regression(CM2Model):
+class CM2Regression(CM2Model, BaseModelForFinetuning):
     """
     CM2Regression is a class that represents a regression model based on the CM2 architecture.
 
