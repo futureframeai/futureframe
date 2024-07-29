@@ -1,8 +1,8 @@
 """Generate the code reference pages."""
 
+import fnmatch
 import os
 from pathlib import Path
-import fnmatch
 
 import mkdocs_gen_files
 

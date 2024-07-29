@@ -1,0 +1,5 @@
+float_only,string_only,int_only,float_with_nan,int_with_nan,string_with_nan,mix_float_int,mix_float_int_string,boolean,datetime
+1.1,a,1,1.1,1.0,a,1.1,1.1,True,2021-01-01
+2.2,b,2,2.2,,,2.0,b,False,2022-02-02
+3.3,c,3,,3.0,c,3.3,3,True,2023-03-03
+4.4,d,4,4.4,4.0,d,4.0,4.4,False,2024-04-04

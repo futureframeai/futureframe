@@ -1,7 +1,5 @@
 import importlib.metadata
 
-from . import benchmarks
-from . import baselines
-from . import models
+from . import baselines, benchmarks, evaluation, models, utils
 
 __version__ = importlib.metadata.version("futureframe")
