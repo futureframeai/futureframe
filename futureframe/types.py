@@ -1,7 +1,7 @@
 from dataclasses import asdict, is_dataclass
 from datetime import datetime
 from enum import Enum, auto
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -20,12 +20,16 @@ def dataclass_to_dict(obj):
         return [dataclass_to_dict(item) for item in obj]
     elif isinstance(obj, dict):
         return {k: dataclass_to_dict(v) for k, v in obj.items()}
+    elif isinstance(obj, tuple):
+        return tuple(dataclass_to_dict(item) for item in obj)
+    elif obj is None:
+        return None
     else:
         return obj
 
 
 class BaseInput:
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         return dataclass_to_dict(self)
 
     def items(self):
@@ -58,10 +62,12 @@ class BaseOutput(BaseInput):
 
 
 class ColumnDtype(Enum):
-    CATEGORICAL = auto()  # 1
-    NUMERICAL = auto()  # 2
-    BOOLEAN = auto()  # 3
-    MISSING = auto()  # 4
+    CATEGORICAL_STR = auto()  # 1
+    CATEGORICAL_INT = auto()  # 2
+    NUMERICAL_FLOAT = auto()
+    NUMERICAL_INT = auto()
+    BOOLEAN = auto()
+    MISSING = auto()
     DATETIME = auto()
     OTHER = auto()
 
@@ -137,6 +143,7 @@ class FinetuningTasks(Enum):
 
 
 def get_finetuning_task_type(y_true):
+    # TODO: num of classes
     if "float" in str(y_true.dtype):
         return FinetuningTasks.REGRESSION
     if len(np.unique(y_true)) == 2:
@@ -145,46 +152,11 @@ def get_finetuning_task_type(y_true):
         return FinetuningTasks.MULTICLASS_CLASSIFICATION
 
 
-# class Column(BaseModel):
-#     name: str
-#     dtype: ColumnDtype
-# unique_values: list[str] | list[int] | list[float] | list[bool] | list[None]
-# num_unique_values: int
-# num_missing_values: int
-# num_total_values: int
-# num_categorical_values: int
-# num_numerical_values: int
-# num_boolean_values: int
-# num_missing_values: int
-# num_other_values: int
-# num_nan_values: int
-# num_str_values: int
-# num_int_values: int
-# num_float_values: int
-# num_bool_values: int
-# num_datetime_values: int
-# num_other_values: int
-# num_unique_str_values: int
-# num_unique_int_values: int
-# num_unique_float_values: int
-# num_unique_bool_values: int
-# num_unique_datetime_values: int
-# num_unique_other_values: int
-# num_unique_nan_values: int
-# num_unique_missing: int
-
-
-# class Cell(BaseModel):
-#     value: str | int | float | bool | pd.Timestamp | None
-#     dtype: ValueDtype
-#
-
-
 def valuedtype_to_columndtype(valuedtype: ValueDtype):
     mapping = {
-        ValueDtype.STR: ColumnDtype.CATEGORICAL,
-        ValueDtype.INT: ColumnDtype.CATEGORICAL,
-        ValueDtype.FLOAT: ColumnDtype.NUMERICAL,
+        ValueDtype.STR: ColumnDtype.CATEGORICAL_STR,
+        ValueDtype.INT: ColumnDtype.CATEGORICAL_INT,
+        ValueDtype.FLOAT: ColumnDtype.NUMERICAL_FLOAT,
         ValueDtype.BOOL: ColumnDtype.BOOLEAN,
         ValueDtype.DATETIME: ColumnDtype.DATETIME,
         ValueDtype.TIMESTAMP: ColumnDtype.DATETIME,

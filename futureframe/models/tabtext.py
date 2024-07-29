@@ -10,12 +10,12 @@ from sklearn.linear_model import LinearRegression, LogisticRegression
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 
-from futureframe.models.base import Predictor
+from futureframe.config import CACHE_ROOT
 
 log = logging.getLogger(__name__)
 
 
-class TabText(Predictor):
+class TabText:
     def __init__(
         self,
         device="cpu",
@@ -37,11 +37,11 @@ class TabText(Predictor):
         if download:
             self.tokenizer = AutoTokenizer.from_pretrained(model_path)
             self.model = AutoModel.from_pretrained(model_path, trust_remote_code=True)
-            self.model.save_pretrained(Path(WEIGHTS_DIR) / f"{model_path}-tokenizer")
-            self.tokenizer.save_pretrained(Path(WEIGHTS_DIR) / f"{model_path}-model")
+            self.model.save_pretrained(Path(CACHE_ROOT) / f"{model_path}-tokenizer")
+            self.tokenizer.save_pretrained(Path(CACHE_ROOT) / f"{model_path}-model")
         else:
-            self.tokenizer = AutoTokenizer.from_pretrained(Path(WEIGHTS_DIR) / f"{model_path}-tokenizer")
-            self.model = AutoModel.from_pretrained(Path(WEIGHTS_DIR) / f"{model_path}-model")
+            self.tokenizer = AutoTokenizer.from_pretrained(Path(CACHE_ROOT) / f"{model_path}-tokenizer")
+            self.model = AutoModel.from_pretrained(Path(CACHE_ROOT) / f"{model_path}-model")
 
         self.model.eval()
         self.model.to(device)
