@@ -4,15 +4,15 @@ import pandas as pd
 import torch.utils.data
 from torch import nn
 from torch.utils.data import DataLoader
+from torch import Tensor
 
 from futureframe.data.tabular_datasets import FeatureDataset
-from futureframe.utils import send_to_device_recursively
 
 log = logging.getLogger(__name__)
 
 
 @torch.no_grad()
-def predict(model: nn.Module, X_test: pd.DataFrame, batch_size: int = 64, num_workers=0):
+def predict(model: nn.Module, X_test: pd.DataFrame, batch_size: int = 64, num_workers=0) -> Tensor:
     """
     Generates predictions for the given test data using the specified model.
 
@@ -25,10 +25,6 @@ def predict(model: nn.Module, X_test: pd.DataFrame, batch_size: int = 64, num_wo
     Returns:
         numpy.ndarray: The predicted values.
     """
-    device = next(model.parameters()).device
-    # assert model tokenizer is fit
-    assert model.tokenizer.is_fit
-
     val_dataset = FeatureDataset(X_test)
 
     val_dataloader = DataLoader(
@@ -42,14 +38,12 @@ def predict(model: nn.Module, X_test: pd.DataFrame, batch_size: int = 64, num_wo
     y_pred = []
     model.eval()
     for _, x in enumerate(val_dataloader):
-        x = model.tokenizer(x)
-        x = send_to_device_recursively(x.to_dict(), device)
         log.debug(f"{x=}")
         logits = model(x)
         log.debug(f"{logits=}")
 
         y_pred.append(logits.cpu())
 
-    y_pred = torch.cat(y_pred, dim=0).squeeze().cpu().numpy()
+    y_pred = torch.cat(y_pred, dim=0).squeeze()
 
     return y_pred
