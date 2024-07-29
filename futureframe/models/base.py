@@ -1,9 +1,9 @@
 from typing import Optional
+
 import pandas as pd
 from torch import nn
 
 from futureframe.finetuning import finetune
-
 from futureframe.inference import predict
 
 

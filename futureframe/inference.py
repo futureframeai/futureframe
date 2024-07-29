@@ -2,9 +2,8 @@ import logging
 
 import pandas as pd
 import torch.utils.data
-from torch import nn
+from torch import Tensor, nn
 from torch.utils.data import DataLoader
-from torch import Tensor
 
 from futureframe.data.tabular_datasets import FeatureDataset
 

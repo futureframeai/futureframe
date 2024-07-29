@@ -1,20 +1,20 @@
 import functools
-import zipfile
-import requests
+import logging
 import os
 import random
 import time
+import zipfile
 from typing import Any
-from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 import regex
+import requests
 import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
-import logging
+from tqdm import tqdm
 
 log = logging.getLogger(__name__)
 

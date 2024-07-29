@@ -1,10 +1,10 @@
 import logging
-from torch import Tensor
 from abc import ABC, abstractmethod
 from typing import Any
 
 import numpy as np
 import pandas as pd
+from torch import Tensor
 
 from futureframe import config
 from futureframe.data.features import clean_entity_names

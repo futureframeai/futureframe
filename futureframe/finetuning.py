@@ -4,14 +4,12 @@ import time
 from collections import defaultdict
 from typing import Optional
 
+import pandas as pd
 import torch.utils.data
 from sklearn.model_selection import train_test_split
-from torch import optim
+from torch import nn, optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from torch import nn
-
-import pandas as pd
 
 from futureframe.data.encoding import BaseFeaturesToModelInput
 from futureframe.data.features import get_num_classes, prepare_target_for_eval
