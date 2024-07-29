@@ -1,15 +1,14 @@
 import logging
 from abc import ABC
+from typing import Callable
 
 import torch.utils.data
-from torch import binary_cross_entropy_with_logits
+from torch import Tensor, binary_cross_entropy_with_logits
 from torch.nn.functional import cross_entropy, mse_loss
 
 from futureframe.evaluation import eval_binary_classification, eval_multiclass_clf, eval_regression
 from futureframe.types import TargetType
 from futureframe.utils import cast_to_ndarray, cast_to_tensor
-from typing import Callable
-from torch import Tensor
 
 log = logging.getLogger(__name__)
 

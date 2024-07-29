@@ -1,9 +1,9 @@
 import logging
 
-import torch.utils.data
-from torch.utils.data import DataLoader
-from torch import nn
 import pandas as pd
+import torch.utils.data
+from torch import nn
+from torch.utils.data import DataLoader
 
 from futureframe.data.tabular_datasets import FeatureDataset
 from futureframe.utils import send_to_device_recursively
