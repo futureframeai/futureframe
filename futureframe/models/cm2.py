@@ -39,13 +39,26 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class CM2EncodedInputs(BaseInput):
-    x_num: Optional[Tensor] = None
-    num_col_input_ids: Optional[Tensor] = None
-    num_col_attn_mask: Optional[Tensor] = None
-    x_cat_input_ids: Optional[Tensor] = None
-    x_cat_attn_mask: Optional[Tensor] = None
-    cat_col_input_ids: Optional[Tensor] = None
-    cat_col_attn_mask: Optional[Tensor] = None
+    """
+    Represents the encoded inputs for the CM2 model.
+
+    Attributes:
+        x_num (Tensor): The numerical input tensor.
+        num_col_input_ids (Tensor): The input IDs for numerical column tokens.
+        num_col_attn_mask (Tensor): The attention mask for numerical column tokens.
+        x_cat_input_ids (Tensor): The input IDs for categorical column tokens.
+        x_cat_attn_mask (Tensor): The attention mask for categorical column tokens.
+        cat_col_input_ids (Tensor): The input IDs for categorical column tokens.
+        cat_col_attn_mask (Tensor): The attention mask for categorical column tokens.
+    """
+
+    x_num: Tensor
+    num_col_input_ids: Tensor
+    num_col_attn_mask: Tensor
+    x_cat_input_ids: Tensor
+    x_cat_attn_mask: Tensor
+    cat_col_input_ids: Tensor
+    cat_col_attn_mask: Tensor
 
 
 class CM2FeaturesToModelInput(BaseFeaturesToModelInput):
@@ -59,6 +72,16 @@ class CM2FeaturesToModelInput(BaseFeaturesToModelInput):
         categorical_columns=None,
         numerical_columns=None,
     ):
+        """
+        Initialize the CM2FeaturesToModelInput class.
+
+        Args:
+            weights_dir (str, optional): Directory to store the weights. Defaults to os.path.join(config.CACHE_ROOT, "cm2").
+            download (bool, optional): Whether to download the tokenizer weights. Defaults to True.
+            disable_tokenizer_parallel (bool, optional): Whether to disable tokenizer parallelism. Defaults to False.
+            categorical_columns (list, optional): List of categorical column names. Defaults to None.
+            numerical_columns (list, optional): List of numerical column names. Defaults to None.
+        """
         tokenizer_dir = os.path.join(weights_dir, "tokenizer")
         if download:
             self.download(tokenizer_dir)
@@ -75,16 +98,43 @@ class CM2FeaturesToModelInput(BaseFeaturesToModelInput):
         self.numerical_columns = numerical_columns
 
     def download(self, path):
+        """
+        Download the tokenizer weights.
+
+        Args:
+            path (str): Directory to save the tokenizer weights.
+        """
         self.tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
 
     def load(self, path):
+        """
+        Load the tokenizer weights from a directory.
+
+        Args:
+            path (str): Directory containing the tokenizer weights.
+        """
         self.tokenizer = BertTokenizerFast.from_pretrained(path)
 
     def save(self, path):
+        """
+        Save the tokenizer weights to a directory.
+
+        Args:
+            path (str): Directory to save the tokenizer weights.
+        """
         self.tokenizer.save_pretrained(path)
 
     @staticmethod
     def _get_columns_types(categorized_columns: dict):
+        """
+        Get the types of columns (numerical or categorical) based on a dictionary of categorized columns.
+
+        Args:
+            categorized_columns (dict): Dictionary mapping column names to their categorized types.
+
+        Returns:
+            tuple: A tuple containing two lists - numerical_columns and categorical_columns.
+        """
         numerical_columns = []
         categorical_columns = []
         for k, v in categorized_columns.items():
@@ -96,6 +146,15 @@ class CM2FeaturesToModelInput(BaseFeaturesToModelInput):
         return numerical_columns, categorical_columns
 
     def tokenize(self, data):
+        """
+        Tokenize the input data using the tokenizer.
+
+        Args:
+            data (list): List of input data to be tokenized.
+
+        Returns:
+            dict: A dictionary containing the tokenized input data.
+        """
         log.debug(f"Tokenizing data: {data=}")
         if len(data) == 0:
             input_ids = torch.tensor([], dtype=torch.long).reshape(0, 0)
@@ -109,6 +168,15 @@ class CM2FeaturesToModelInput(BaseFeaturesToModelInput):
 
     @torch.no_grad()
     def encode_train(self, data: pd.DataFrame) -> CM2EncodedInputs:
+        """
+        Encode the training data into CM2 model inputs.
+
+        Args:
+            data (pd.DataFrame): Training data to be encoded.
+
+        Returns:
+            CM2EncodedInputs: Encoded inputs for the CM2 model.
+        """
         if self.categorical_columns is None or self.numerical_columns is None:
             categorized_columns, _ = infer_majority_dtype(data)
             log.debug(f"{categorized_columns=}")
@@ -717,6 +785,26 @@ class CM2LinearClassifierHead(nn.Module):
 
 
 class CM2Classifier(CM2Model):
+    """
+    CM2Classifier is a classifier model based on the CM2Model architecture.
+
+    Args:
+        download (bool, optional): Whether to download pre-trained weights if not already available. Defaults to True.
+        load_pre_trained (bool, optional): Whether to load pre-trained weights if available. Defaults to True.
+        checkpoint_dir (str, optional): Directory to save/load checkpoints. Defaults to os.path.join(config.CACHE_ROOT, "cm2").
+        categorical_columns (list, optional): List of categorical column names. Defaults to None.
+        numerical_columns (list, optional): List of numerical column names. Defaults to None.
+        num_class (int, optional): Number of classes. Defaults to 2.
+        hidden_dim (int, optional): Dimensionality of the hidden layers. Defaults to 128.
+        num_layer (int, optional): Number of layers. Defaults to 3.
+        num_attention_head (int, optional): Number of attention heads. Defaults to 8.
+        hidden_dropout_prob (float, optional): Dropout probability for the hidden layers. Defaults to 0.1.
+        ffn_dim (int, optional): Dimensionality of the feed-forward network. Defaults to 256.
+        activation (str, optional): Activation function to use. Defaults to "relu".
+        vocab_freeze (bool, optional): Whether to freeze the vocabulary during training. Defaults to True.
+        pool_policy (str, optional): Pooling policy for the final output. Defaults to "avg".
+    """
+
     def __init__(
         self,
         download=True,
@@ -764,6 +852,24 @@ class CM2LinearRegressionHead(CM2LinearClassifierHead):
 
 
 class CM2Regression(CM2Model):
+    """
+    CM2Regression is a class that represents a regression model based on the CM2 architecture.
+
+    Args:
+        download (bool, optional): Whether to download pre-trained weights. Defaults to True.
+        load_pre_trained (bool, optional): Whether to load pre-trained weights. Defaults to True.
+        checkpoint_dir (str, optional): Directory to save/load checkpoints. Defaults to os.path.join(config.CACHE_ROOT, "cm2").
+        categorical_columns (list, optional): List of categorical column names. Defaults to None.
+        numerical_columns (list, optional): List of numerical column names. Defaults to None.
+        hidden_dim (int, optional): Dimension of the hidden layers. Defaults to 128.
+        num_layer (int, optional): Number of layers. Defaults to 2.
+        num_attention_head (int, optional): Number of attention heads. Defaults to 8.
+        hidden_dropout_prob (float, optional): Dropout probability for hidden layers. Defaults to 0.
+        ffn_dim (int, optional): Dimension of the feed-forward network. Defaults to 256.
+        activation (str, optional): Activation function for the hidden layers. Defaults to "relu".
+        vocab_freeze (bool, optional): Whether to freeze the vocabulary. Defaults to False.
+    """
+
     def __init__(
         self,
         download=True,
