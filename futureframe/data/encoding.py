@@ -1,4 +1,5 @@
 import logging
+from torch import Tensor
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -24,15 +25,15 @@ class BaseFeaturesToModelInput(ABC):
     def __init__(self):
         raise NotImplementedError
 
+    def fit(self, data: pd.DataFrame, *args, **kwargs):
+        return self
+
     @abstractmethod
-    def encode_train(self, data: pd.DataFrame, *args, **kwargs):
+    def encode(self, data: pd.DataFrame, *args, **kwargs) -> dict[str, Tensor]:
         pass
 
-    def encode_pred(self, data: pd.DataFrame, *args, **kwargs):
-        return self.encode_train(data, *args, **kwargs)
-
-    def __call__(self, data, *args: Any, **kwds: Any) -> Any:
-        return self.encode_train(data, *args, **kwds)
+    def __call__(self, data, *args: Any, **kwds: Any):
+        return self.encode(data, *args, **kwds)
 
     def download(self, path: str):
         pass
