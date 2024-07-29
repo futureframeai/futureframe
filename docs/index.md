@@ -14,8 +14,6 @@ Empowering Data Scientists with Foundation Models for Tabular data.
 pip install futureframe
 ```
 
-2. Download model weights [here](https://drive.google.com/drive/folders/1-SVab4cv3nLaUJjyOlscKP_OxOBbs_4e?usp=sharing) and store the `weights` folder in your working directory.
-
 ## Quick Start
 
 Use Future Frame to fine-tune a pre-trained foundation model on a classification task.
@@ -61,9 +59,10 @@ More foundation models will be integrated into the library soon. Stay stuned by 
 ## Links
 
 - [Future Frame Official Website](https://futureframe.ai/)
+- [Future Frame API Reference](https://futureframe.ai/api-reference/)
 - [`futureframe` PyPI Page](https://pypi.python.org/pypi/futureframe)
 - [`futureframe` GitHub Repository](https://github.com/futureframeai/futureframe)
-- Documentation: coming soon!
+- [`futureframe` Documentation](https://futureframe.ai/docs/)
 
 ## Contributing
 
