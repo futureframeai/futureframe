@@ -1,9 +1,14 @@
 import logging
+from abc import ABC, abstractmethod
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from futureframe import config
+from futureframe.data.features import clean_entity_names
+
+log = logging.getLogger(__name__)
 
 text_encoding_models = [
     "fasttext",
@@ -15,11 +20,35 @@ text_encoding_models = [
 ]
 
 
+class BaseFeaturesToModelInput(ABC):
+    def __init__(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def encode_train(self, data: pd.DataFrame, *args, **kwargs):
+        pass
+
+    def encode_pred(self, data: pd.DataFrame, *args, **kwargs):
+        return self.encode_train(data, *args, **kwargs)
+
+    def __call__(self, data, *args: Any, **kwds: Any) -> Any:
+        return self.encode_train(data, *args, **kwds)
+
+    def download(self, path: str):
+        pass
+
+    def load(self, path: str):
+        pass
+
+    def save(self, path: str):
+        pass
+
+
 def extract_fasttext_features(data: pd.DataFrame, extract_col_name: str):
     import fasttext
 
     # Preliminary Settings
-    lm_model = fasttext.load_model(config_directory["fasttext"])
+    lm_model = fasttext.load_model()
 
     # Original data
     data_ = data.copy()
@@ -27,7 +56,7 @@ def extract_fasttext_features(data: pd.DataFrame, extract_col_name: str):
     data_ = data.copy()
 
     # Entity Names
-    ent_names = _clean_entity_names(data[extract_col_name])
+    ent_names = clean_entity_names(data[extract_col_name])
     ent_names = list(ent_names)
 
     # Data Fasttext for entity names
@@ -43,51 +72,8 @@ def extract_fasttext_features(data: pd.DataFrame, extract_col_name: str):
     return data_fasttext
 
 
-def extract_llm_features(
-    data: pd.DataFrame,
-    extract_col_name: str,
-    device: str = "cuda:0",
-):
-    # Load LLM Model
-    from sentence_transformers import SentenceTransformer
-
-    lm_model = SentenceTransformer("intfloat/e5-large-v2", device=device)
-
-    # Original data
-    data_ = data.copy()
-    data_.replace("\n", " ", regex=True, inplace=True)
-
-    # Entity Names
-    ent_names = _clean_entity_names(data_[extract_col_name].copy())
-    ent_names = ent_names.astype(str)
-    ent_names = "query: " + ent_names  # following the outlined procedure using "query: "
-    ent_names = list(ent_names)
-
-    # Data for entity names
-    embedding = lm_model.encode(ent_names, convert_to_numpy=True)
-    embedding = pd.DataFrame(embedding)
-    col_names = [f"X{i}" for i in range(embedding.shape[1])]
-    embedding = embedding.set_axis(col_names, axis="columns")
-    embedding = pd.concat([embedding, data[extract_col_name]], axis=1)
-    # data_fasttext.drop_duplicates(inplace=True)
-    embedding = embedding.reset_index(drop=True)
-
-    return embedding
-
-
 def get_text_encoding_model(model_name: str):
     from sentence_transformers import SentenceTransformer
 
-    model = SentenceTransformer("BAAI/bge-large-zh-v1.5", cache_folder=config.CACHE_ROOT)
+    model = SentenceTransformer(model_name, cache_folder=config.CACHE_ROOT)
     return model
-
-
-class Cache:
-    pass
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    model = get_text_encoding_model(text_encoding_models[1])
-    sentences = ["Hi"]
-    print(model(sentences))
