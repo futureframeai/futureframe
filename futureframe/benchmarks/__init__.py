@@ -1,1 +1,0 @@
-from ._registry import create_benchmark
