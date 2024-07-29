@@ -22,26 +22,102 @@ text_encoding_models = [
 
 
 class BaseFeaturesToModelInput(ABC):
+    """
+    Base class for encoding features into model inputs.
+
+    This class provides a base implementation for encoding features into model inputs.
+    Subclasses should implement the `encode` method to perform the actual encoding.
+
+    Attributes:
+        None
+
+    Methods:
+        fit(data: pd.DataFrame, *args, **kwargs) -> self:
+            Fit the encoder to the data.
+
+        encode(data: pd.DataFrame, *args, **kwargs) -> dict[str, Tensor]:
+            Encode the data into model inputs.
+
+        __call__(data, *args: Any, **kwds: Any):
+            Call the `encode` method.
+
+        download(path: str):
+            Download the encoder to the specified path.
+
+        load(path: str):
+            Load the encoder from the specified path.
+
+        save(path: str):
+            Save the encoder to the specified path.
+    """
+
     def __init__(self):
         raise NotImplementedError
 
     def fit(self, data: pd.DataFrame, *args, **kwargs):
+        """
+        Fit the encoder to the data.
+
+        Args:
+            data (pd.DataFrame): The data to fit the encoder on.
+
+        Returns:
+            self: The fitted encoder object.
+        """
         return self
 
     @abstractmethod
     def encode(self, data: pd.DataFrame, *args, **kwargs) -> dict[str, Tensor]:
+        """
+        Encode the data into model inputs.
+
+        This method should be implemented by subclasses to perform the actual encoding.
+
+        Args:
+            data (pd.DataFrame): The data to encode.
+
+        Returns:
+            dict[str, Tensor]: A dictionary of encoded model inputs.
+        """
         pass
 
     def __call__(self, data, *args: Any, **kwds: Any):
+        """
+        Call the `encode` method.
+
+        Args:
+            data: The data to encode.
+
+        Returns:
+            dict[str, Tensor]: A dictionary of encoded model inputs.
+        """
         return self.encode(data, *args, **kwds)
 
     def download(self, path: str):
+        """
+        Download the encoder to the specified path.
+
+        Args:
+            path (str): The path to download the encoder to.
+        """
         pass
 
     def load(self, path: str):
+        """
+        Load the encoder from the specified path.
+
+        Args:
+            path (str): The path to load the encoder from.
+        """
         pass
 
     def save(self, path: str):
+        """
+        Save the encoder to the specified path.
+
+        Args:
+            path (str): The path to save the encoder to.
+        """
         pass
 
 

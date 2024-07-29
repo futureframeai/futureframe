@@ -14,7 +14,7 @@ from torch import nn
 import pandas as pd
 
 from futureframe.data.encoding import BaseFeaturesToModelInput
-from futureframe.data.features import prepare_target_for_eval
+from futureframe.data.features import get_num_classes, prepare_target_for_eval
 from futureframe.data.tabular_datasets import SupervisedDataset
 from futureframe.optim import get_linear_warmup_cos_lr_scheduler
 from futureframe.tasks import create_task
@@ -29,9 +29,9 @@ def finetune(
     model: nn.Module,
     X_train: pd.DataFrame,
     y_train: pd.Series,
-    num_classes: int,
-    max_steps: int,
-    checkpoints_dir: str,
+    num_classes: Optional[int] = None,
+    max_steps: int = 1000,
+    checkpoints_dir: Optional[str] = None,
     input_encoder: Optional[BaseFeaturesToModelInput] = None,
     num_eval: int = 10,
     patience: Optional[int] = 3,
@@ -65,9 +65,12 @@ def finetune(
     seed_all(seed)
     device = next(model.parameters()).device
     log.info(f"Using device: {device}")
+
+    if num_classes is None:
+        num_classes = get_num_classes(y_train)
+
     task = create_task(num_classes)
 
-    # fit tokenizer
     if input_encoder is not None:
         input_encoder.fit(X_train)
 
@@ -124,10 +127,6 @@ def finetune(
 
         t0_global = time.perf_counter()
         log.debug(f"{x=}, {y=}")
-        t0 = time.perf_counter()
-        x = model.tokenizer(x)
-        t1 = time.perf_counter()
-        t_tok = t1 - t0
         if input_encoder is not None:
             x = input_encoder.encode(x)
         x = send_to_device_recursively(x, device, non_blocking=True)
@@ -135,7 +134,7 @@ def finetune(
 
         t0 = time.perf_counter()
         optimizer.zero_grad()
-        logits = model(**x)
+        logits = model(x)
         log.debug(f"{logits=}")
         loss = task.compute_loss(y, logits).mean()
         log.debug(f"{loss=}")

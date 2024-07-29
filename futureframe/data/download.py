@@ -13,6 +13,16 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class Source(ABC):
+    """
+    Represents a data source for downloading datasets.
+
+    Attributes:
+        link (str): The URL of the dataset.
+        base_name (str): The base name of the downloaded file.
+        download_fn (Callable[[str, str], None]): The function used to download the dataset.
+        get_dataset_id_fn (Callable[[str], str]): The function used to get the dataset ID.
+    """
+
     link: str
     base_name: str
     download_fn: Callable[[str, str], None]
