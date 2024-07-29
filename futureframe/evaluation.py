@@ -6,6 +6,7 @@ this module is designed to offer flexibility in evaluating your model's predicti
 import logging
 
 import numpy as np
+import torchmetrics
 from sklearn.metrics import (
     accuracy_score,
     average_precision_score,
@@ -17,6 +18,7 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
+from torch import Tensor
 from tqdm import tqdm
 
 from futureframe.data.features import prepare_target_for_eval
@@ -25,6 +27,150 @@ log = logging.getLogger(__name__)
 
 
 METRICS = ["accuracy", "auc", "f1", "precision", "recall", "mse", "mae", "r2", "ap"]
+
+
+def _accuracy_score(y_true: np.ndarray | Tensor, y_pred: np.ndarray | Tensor) -> float | Tensor:
+    """
+    Compute the accuracy score.
+
+    Args:
+        y_true (np.ndarray | Tensor): The true labels.
+        y_pred (np.ndarray | Tensor): The predicted labels.
+
+    Returns:
+        float: The accuracy score.
+    """
+    if isinstance(y_true, Tensor):
+        return torchmetrics.functional.accuracy(y_pred, y_true)
+    return accuracy_score(y_true, y_pred)
+
+
+def _auc_score(y_true: np.ndarray | Tensor, y_pred: np.ndarray | Tensor) -> float | Tensor:
+    """
+    Compute the area under the ROC curve.
+
+    Args:
+        y_true (np.ndarray | Tensor): The true labels.
+        y_pred (np.ndarray | Tensor): The predicted labels.
+
+    Returns:
+        float: The AUC score.
+    """
+    if isinstance(y_true, Tensor):
+        return torchmetrics.functional.auroc(y_pred, y_true)
+    return roc_auc_score(y_true, y_pred)
+
+
+def _f1_score(y_true: np.ndarray | Tensor, y_pred: np.ndarray | Tensor) -> float | Tensor:
+    """
+    Compute the F1 score.
+
+    Args:
+        y_true (np.ndarray | Tensor): The true labels.
+        y_pred (np.ndarray | Tensor): The predicted labels.
+
+    Returns:
+        float: The F1 score.
+    """
+    if isinstance(y_true, Tensor):
+        return torchmetrics.functional.f1(y_pred, y_true)
+    return f1_score(y_true, y_pred)
+
+
+def _mse_score(y_true: np.ndarray | Tensor, y_pred: np.ndarray | Tensor) -> float | Tensor:
+    """
+    Compute the mean squared error.
+
+    Args:
+        y_true (np.ndarray | Tensor): The true labels.
+        y_pred (np.ndarray | Tensor): The predicted labels.
+
+    Returns:
+        float: The mean squared error.
+    """
+    if isinstance(y_true, Tensor):
+        return torchmetrics.functional.mean_squared_error(y_pred, y_true)
+    return mean_squared_error(y_true, y_pred)
+
+
+def _mae_score(y_true: np.ndarray | Tensor, y_pred: np.ndarray | Tensor) -> float | Tensor:
+    """
+    Compute the mean absolute error.
+
+    Args:
+        y_true (np.ndarray | Tensor): The true labels.
+        y_pred (np.ndarray | Tensor): The predicted labels.
+
+    Returns:
+        float: The mean absolute error.
+    """
+    if isinstance(y_true, Tensor):
+        return torchmetrics.functional.mean_absolute_error(y_pred, y_true)
+    return mean_absolute_error(y_true, y_pred)
+
+
+def _r2_score(y_true: np.ndarray | Tensor, y_pred: np.ndarray | Tensor) -> float | Tensor:
+    """
+    Compute the coefficient of determination (R^2).
+
+    Args:
+        y_true (np.ndarray | Tensor): The true labels.
+        y_pred (np.ndarray | Tensor): The predicted labels.
+
+    Returns:
+        float: The R^2 score.
+    """
+    if isinstance(y_true, Tensor):
+        return torchmetrics.functional.r2score(y_pred, y_true)
+    return r2_score(y_true, y_pred)
+
+
+def _precision_score(y_true: np.ndarray | Tensor, y_pred: np.ndarray | Tensor) -> float | Tensor:
+    """
+    Compute the precision score.
+
+    Args:
+        y_true (np.ndarray | Tensor): The true labels.
+        y_pred (np.ndarray | Tensor): The predicted labels.
+
+    Returns:
+        float: The precision score.
+    """
+    if isinstance(y_true, Tensor):
+        return torchmetrics.functional.precision(y_pred, y_true)
+    return precision_score(y_true, y_pred)
+
+
+def _recall_score(y_true: np.ndarray | Tensor, y_pred: np.ndarray | Tensor) -> float | Tensor:
+    """
+    Compute the recall score.
+
+    Args:
+        y_true (np.ndarray | Tensor): The true labels.
+        y_pred (np.ndarray | Tensor): The predicted labels.
+
+    Returns:
+        float: The recall score.
+    """
+    if isinstance(y_true, Tensor):
+        return torchmetrics.functional.recall(y_pred, y_true)
+    return recall_score(y_true, y_pred)
+
+
+def _ap_score(y_true: np.ndarray | Tensor, y_pred: np.ndarray | Tensor) -> float | Tensor:
+    """
+    Compute the average precision score.
+
+    Args:
+        y_true (np.ndarray | Tensor): The true labels.
+        y_pred (np.ndarray | Tensor): The predicted labels.
+
+    Returns:
+        float: The average precision score.
+    """
+    if isinstance(y_true, Tensor):
+        return torchmetrics.functional.average_precision(y_pred, y_true)
+    return average_precision_score(y_true, y_pred)
 
 
 def eval_binary_classification(
