@@ -1,52 +1,58 @@
-from abc import ABC, abstractmethod
+from typing import Optional
+import pandas as pd
+from torch import nn
 
-import numpy as np
-import torch.nn.functional as F
-from torch import Tensor, nn
+from futureframe.finetuning import finetune
 
-
-class Predictor(ABC):
-    @abstractmethod
-    def finetune(self, X_train, y_train):
-        pass
-
-    @abstractmethod
-    def predict(self, X_test) -> list[int] | list[str] | list[float] | np.ndarray:
-        pass
+from futureframe.inference import predict
 
 
-mse_loss = nn.MSELoss(reduction="none")
-binary_ce_loss = nn.BCEWithLogitsLoss(reduction="none")
-ce_loss = nn.CrossEntropyLoss(reduction="none")
+class BaseModelForFinetuning(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.input_encoder = None
 
+    def finetune(
+        self,
+        X_train: pd.DataFrame,
+        y_train: pd.Series,
+        num_classes: int,
+        max_steps: int,
+        checkpoints_dir: str,
+        num_eval: int = 10,
+        patience: Optional[int] = 3,
+        lr: float = 1e-3,
+        batch_size: int = 64,
+        num_workers: int = 8,
+        val_size: float = 0.05,
+        seed: int = 42,
+    ):
+        return finetune(
+            model=self,
+            input_encoder=self.input_encoder,
+            X_train=X_train,
+            y_train=y_train,
+            num_classes=num_classes,
+            max_steps=max_steps,
+            checkpoints_dir=checkpoints_dir,
+            num_eval=num_eval,
+            patience=patience,
+            lr=lr,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            val_size=val_size,
+            seed=seed,
+        )
 
-def cos_sim_loss(y_pred, y_true):
-    # _loss = nn.CosineEmbeddingLoss(reduction="none")
-    # return _loss(y_pred, y_true, torch.ones(y_true.shape[0], device=y_true.device))
-    return 1 - F.cosine_similarity(y_pred, y_true, dim=1)
-
-
-def finetuning_loss(y_pred: Tensor, y_true: Tensor, num_classes: int):
-    if num_classes == 1:
-        return mse_loss(y_pred, y_true)
-    elif num_classes == 2:
-        return binary_ce_loss(y_pred, y_true)
-    elif num_classes > 2:
-        return ce_loss(y_pred, y_true)
-    else:
-        raise ValueError("num_classes must be >= 1")
-
-
-def finetuning_metrics(y_pred: Tensor, y_true: Tensor, num_classes: int):
-    if num_classes == 1:
-        return {"mse": mse_loss(y_pred, y_true)}
-    elif num_classes == 2:
-        return {"bce": binary_ce_loss(y_pred, y_true)}
-    elif num_classes > 2:
-        acc = (y_pred.argmax(dim=1) == y_true).float().mean()
-        return {"ce": ce_loss(y_pred, y_true), "acc": acc}
-    else:
-        raise ValueError("num_classes must be >= 1")
-
-
-def get_finetuning_metrics_fn(): ...
+    def predict(
+        self,
+        X_test: pd.DataFrame,
+        batch_size: int = 64,
+        num_workers=0,
+    ):
+        return predict(
+            model=self,
+            X_test=X_test,
+            batch_size=batch_size,
+            num_workers=num_workers,
+        )

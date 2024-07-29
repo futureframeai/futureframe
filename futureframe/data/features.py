@@ -1,13 +1,13 @@
 import logging
+import re
 import warnings
-from enum import Enum
 from typing import Literal, Optional
 
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder, QuantileTransformer
 
-from futureframe.types import ColumnDtype, TargetType, ValueDtype, valuedtype_to_columndtype
+from futureframe.types import ColumnDtype, TargetType, TaskType, ValueDtype, valuedtype_to_columndtype
 from futureframe.utils import cast_to_ndarray, cast_to_series
 
 warnings.filterwarnings("ignore", message="n_quantiles.*n_samples")
@@ -15,25 +15,71 @@ warnings.filterwarnings("ignore", message="n_quantiles.*n_samples")
 log = logging.getLogger(__name__)
 
 
-def clean_df(df: pd.DataFrame):
+def clean_entity_names(data):
+    if not isinstance(data, str):
+        return data
+
+    data = data.replace("<", "").replace(">", "").replace("\n", "").replace("_", " ").lower()
+
+    data = re.sub(r"[^a-z0-9\s\-\'\"]+", "", data)
+
+    data = re.sub(r"\s+", " ", data).strip()
+
+    return data
+
+
+def remove_unique_vals_columns(df: pd.DataFrame):
     nunique = df.nunique()
     drop_columns = nunique[nunique == 1].index.tolist()
     df = df.drop(columns=drop_columns)
+    return df
+
+
+def clean_df(df: pd.DataFrame):
+    df = remove_unique_vals_columns(df)
+    df.columns = df.columns.map(clean_entity_names)
     df = df.drop_duplicates()
     return df
 
 
 def get_type(val):
+    # log.debug(f"{val=}")
+    t = ValueDtype.OTHER.name
     if pd.isna(val):
-        return "nan"
+        t = ValueDtype.NAN.name
+    elif isinstance(val, bool):
+        t = ValueDtype.BOOL.name
+    elif pd.api.types.is_numeric_dtype(type(val)):
+        fractional_parts, integral_parts = np.modf(val)
+        if np.all(fractional_parts == 0):
+            t = ValueDtype.INT.name
+        else:
+            t = ValueDtype.FLOAT.name
     else:
-        return type(val).__name__
+        conversions = [
+            (int, ValueDtype.INT.name),
+            (float, ValueDtype.FLOAT.name),
+            (pd.to_numeric, ValueDtype.FLOAT.name),
+            (pd.to_datetime, ValueDtype.DATETIME.name),
+            (pd.to_timedelta, ValueDtype.TIMEDELTA.name),
+        ]
+        for func, t in conversions:
+            try:
+                val = func(val)
+                break
+            except Exception:
+                pass
+        else:
+            t = ValueDtype.get(type(val).__name__).name
+
+    # log.debug(f"{t=}")
+    return t
 
 
 def get_column_dtype_counts(df: pd.DataFrame):
     # Function to map values to type names, including NaNs
-
     dtypes = df.map(get_type)
+    log.debug(f"{dtypes=}")
 
     # Count the occurrences of each data type in each column
     column_dtypes_count = dtypes.apply(pd.Series.value_counts).fillna(0).astype(int).to_dict()
@@ -47,6 +93,8 @@ def get_column_dtype_counts(df: pd.DataFrame):
 
 def infer_majority_dtype(df: pd.DataFrame):
     col_dtype_counts, dtypes_mask = get_column_dtype_counts(df)
+    log.debug(f"{col_dtype_counts=}")
+
     categorized_columns = {}
     for col in df.columns:
         col_dtypes = col_dtype_counts[col]
@@ -74,28 +122,6 @@ def get_numerical_transformation_fn_by_name(name: str):
     return transformations[name]
 
 
-class CellValueTokensType(Enum):
-    UNK = 0
-    SEP = 1
-    PAD = 2
-    CLS = 3
-    MASK = 4
-    NAN = 5
-    FLOAT = 6
-    CAT = 7
-
-
-def get_element_type(x):
-    try:
-        xx = pd.to_numeric(x, errors="raise")
-        # check if nan
-        if pd.isna(xx):
-            return CellValueTokensType.NAN.name
-        return CellValueTokensType.FLOAT.name
-    except Exception:
-        return CellValueTokensType.CAT.name
-
-
 def fit_numerical_transformation(
     df: pd.DataFrame | pd.Series, numerical_transformation_name="quantile", **numerical_transform_kwargs
 ):
@@ -109,8 +135,10 @@ def fit_numerical_transformation(
 def prepare_df(df: pd.DataFrame, numerical_transformation_name="quantile", **numerical_transform_kwargs):
     columns = df.columns
     categorized_columns, dtypes_mask = infer_majority_dtype(df)
-    numerical_columns = [col for col, dtype in categorized_columns.items() if dtype == ColumnDtype.NUMERICAL.name]
-    non_numerical_columns = [col for col, dtype in categorized_columns.items() if dtype != ColumnDtype.NUMERICAL.name]
+    numerical_columns = [col for col, dtype in categorized_columns.items() if dtype == ColumnDtype.NUMERICAL_FLOAT.name]
+    non_numerical_columns = [
+        col for col, dtype in categorized_columns.items() if dtype != ColumnDtype.NUMERICAL_FLOAT.name
+    ]
 
     # numerical transformation
     numerical_transformation = None
@@ -139,14 +167,17 @@ def prepare_df(df: pd.DataFrame, numerical_transformation_name="quantile", **num
     )
 
 
+def get_dtype_mask(df: pd.DataFrame, dtype):
+    dtype_mask = df.map(lambda x: isinstance(x, dtype))
+    return dtype_mask
+
+
 def get_text_mask(df: pd.DataFrame):
-    text_mask = df.map(lambda x: isinstance(x, str))
-    return text_mask
+    return get_dtype_mask(df, str)
 
 
 def get_float_mask(df: pd.DataFrame):
-    float_mask = df.map(lambda x: isinstance(x, float))
-    return float_mask
+    return get_dtype_mask(df, float)
 
 
 def get_non_nan_values_indices(df: pd.DataFrame):
@@ -235,14 +266,14 @@ def extract_target_variable(df: pd.DataFrame, target: Optional[str] = None):
 
 def get_num_classes_classification(y):
     if not isinstance(y, pd.Series):
-        y = pd.Series(y)
+        y = cast_to_series(y)
     num_classes = len(y.value_counts())
     return num_classes
 
 
-def get_num_classes(y: TargetType, task_type: Optional[str] = None):
+def get_num_classes(y: TargetType, task_type: Optional[TaskType] = None):
     if task_type is not None:
-        if task_type == "classification":
+        if task_type == "classification" or task_type == "multiclass_classification":
             return get_num_classes_classification(y)
         if task_type == "regression":
             return 1
@@ -296,3 +327,7 @@ def prepare_target_for_eval(y: TargetType, num_classes: Optional[int] = None) ->
 def prepare_pred_for_eval(y: TargetType, num_classes: Optional[int] = None) -> np.ndarray:
     y = cast_to_ndarray(y)
     return y
+
+
+def get_batch_size(max_num_cells, num_cols):
+    return max_num_cells // num_cols

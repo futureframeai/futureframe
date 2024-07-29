@@ -1,8 +1,10 @@
 # 💠 Future Frame
 
-* This Python package allows you to interact with pre-trained foundation models for tabular data.
-* Easily fine-tune them on your classification and regression use cases in a single line of code.
-* Interested in what we're building? Join our [waitlist](https://futureframe.ai/).
+Empowering Data Scientists with Foundation Models for Tabular data.
+
+- This Python package allows you to interact with pre-trained foundation models for tabular data.
+- Easily fine-tune them on your classification and regression use cases in a single line of code.
+- Interested in what we're building? Join our [waitlist](https://futureframe.ai/)!
 
 ## Installation
 
@@ -12,13 +14,11 @@
 pip install futureframe
 ```
 
-2. Download model weights [here](https://drive.google.com/drive/folders/1-SVab4cv3nLaUJjyOlscKP_OxOBbs_4e?usp=sharing) and store the `weights` folder in your working directory.
-
 ## Quick Start
 
 Use Future Frame to fine-tune a pre-trained foundation model on a classification task.
 
-```python
+```python linenums="1"
 # Import standard libraries
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -58,13 +58,18 @@ More foundation models will be integrated into the library soon. Stay stuned by 
 
 ## Links
 
-* [Future Frame Official Website](https://futureframe.ai/)
-* [`futureframe` PyPI Page](https://pypi.python.org/pypi/futureframe)
-* [`futureframe` GitHub Repository](https://github.com/futureframeai/futureframe)
-* Documentation: coming soon!
+- [Future Frame Official Website](https://futureframe.ai/)
+- [Future Frame API Reference](https://futureframe.ai/api-reference/)
+- [`futureframe` PyPI Page](https://pypi.python.org/pypi/futureframe)
+- [`futureframe` GitHub Repository](https://github.com/futureframeai/futureframe)
+- [`futureframe` Documentation](https://futureframe.ai/docs/)
 
 ## Contributing
 
-* We are currently under heavy development.
-* If you'd like to contribute, please send us an email at <i>eduardo(at)futureframe.ai</i>.
-* To report a bug, please write an [issue](https://github.com/futureframeai/futureframe/issues/new).
+- We are currently under heavy development.
+- If you'd like to contribute, please send us an email at <i>eduardo(at)futureframe.ai</i>.
+- To report a bug, please write an [issue](https://github.com/futureframeai/futureframe/issues/new).
+
+---
+
+Foundation models for tabular data can AI performance for Healthcare, Education, Telecommunications, Energy, and Finance industries.

@@ -1,6 +1,5 @@
 import logging
 import os
-import shutil
 from abc import ABC
 from dataclasses import dataclass
 from enum import Enum
@@ -47,9 +46,17 @@ def download_dataset_from_link(link: str, dest: str):
     response = requests.get(link, stream=True)
     if response.status_code == 200:
         with open(os.path.join(dest, os.path.basename(link)), "wb") as f:
-            shutil.copyfileobj(response.raw, f)
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
     else:
         print(f"Failed to download from {link}")
+
+
+def download_with_request(url, download_path):
+    response = requests.get(url, stream=True)
+    with open(download_path, "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
 
 
 def get_dataset_id_from_openml(link: str):
@@ -76,13 +83,13 @@ class Sources(Enum):
         get_dataset_id_fn=get_dataset_id_from_kaggle,
     )
     OPENML = Source(
-        link="https://openml.org/",
+        link="openml.org",
         base_name="openml",
         download_fn=download_dataset_from_openml,
         get_dataset_id_fn=get_dataset_id_from_openml,
     )
     UCI = Source(
-        link="https://archive.ics.uci.edu",
+        link="archive.ics.uci.edu",
         base_name="uci",
         download_fn=download_dataset_from_uci,
         get_dataset_id_fn=get_dataset_id_from_uci,
