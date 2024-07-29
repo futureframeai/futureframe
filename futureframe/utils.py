@@ -1,8 +1,11 @@
 import functools
+import zipfile
+import requests
 import os
 import random
 import time
 from typing import Any
+from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
@@ -11,6 +14,9 @@ import regex
 import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def freeze(layer, verbose=False):
@@ -310,3 +316,41 @@ def save_or_append_to_csv(df: pd.DataFrame, path: str):
         df.to_csv(path, index=False)
     else:
         df.to_csv(path, mode="a", header=False, index=False)
+
+
+def download_file(url, local_path):
+    log.info(f"Downloading file from {url}")
+    response = requests.get(url, stream=True)
+    total_size = int(response.headers.get("content-length", 0))
+    block_size = 1024  # 1 Kibibyte
+    t = tqdm(total=total_size, unit="iB", unit_scale=True)
+    if response.status_code == 200:
+        with open(local_path, "wb") as file:
+            for data in response.iter_content(block_size):
+                t.update(len(data))
+                file.write(data)
+    t.close()
+
+    if total_size != 0 and t.n != total_size:
+        log.info("Failed to download file")
+        response.raise_for_status()
+    else:
+        log.info(f"File downloaded successfully and saved as {local_path}")
+
+
+# Function to extract the zip file
+def extract_zip(zip_path, extract_to="."):
+    log.info(f"Extracting {zip_path} to {extract_to}")
+    with zipfile.ZipFile(zip_path, "r") as zip_ref:
+        zip_ref.extractall(extract_to)
+    log.info("Extraction complete.")
+
+
+def download_and_extract(url: str, root: str, filename=None, clean=False):
+    if filename is None:
+        filename = os.path.basename(url)
+    dest = os.path.join(root, filename)
+    download_file(url, dest)
+    extract_zip(dest, root)
+    if clean:
+        os.remove(dest)
